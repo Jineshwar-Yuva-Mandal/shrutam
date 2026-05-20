@@ -1,0 +1,17 @@
+{
+  "name": "shrutam-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "backend": "NODE_ENV=development cds watch services/backend"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0"
+  }
+}

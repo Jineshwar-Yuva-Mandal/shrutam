@@ -1,0 +1,6 @@
+code,name,descr
+BOARD_ADMIN,Board Admin,Administrator of an Examination Board
+CENTER_ADMIN,Center Admin,Administrator of a local Paathshala center
+TEACHER,Teacher,Teacher assigned to batches
+STUDENT,Student,Student enrolled in a Paathshala
+PARENT,Parent,Parent of a enrolled student

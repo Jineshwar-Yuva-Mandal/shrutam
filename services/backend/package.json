@@ -1,0 +1,31 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "cds-serve"
+  },
+  "author": "Deepak Jain",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@cap-js/postgres": "^2.3.0",
+    "@sap/cds": "^9.9.1"
+  },
+  "cds": {
+    "requires": {
+      "[development]": {
+        "db": {
+          "kind": "sqlite",
+          "credentials": {
+            "url": ":memory:"
+          }
+        }
+      }
+    }
+  },
+  "devDependencies": {
+    "@cap-js/sqlite": "^2.4.0"
+  }
+}

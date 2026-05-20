@@ -1,0 +1,7 @@
+ID,email,firstName,lastName,age,phoneNumber
+u1000000-0000-0000-0000-000000000001,admin@centraljainboard.org,Ramesh,Shah,45,9876543210
+u1000000-0000-0000-0000-000000000002,centeradmin@mahaveer.org,Suresh,Jain,38,9845012345
+u1000000-0000-0000-0000-000000000003,teacher.priya@mahaveer.org,Priya,Kothari,30,9900112233
+u1000000-0000-0000-0000-000000000004,student.aryan@gmail.com,Aryan,Jain,12,9911223344
+u1000000-0000-0000-0000-000000000005,student.diya@gmail.com,Diya,Shah,11,9922334455
+u1000000-0000-0000-0000-000000000006,parent.meena@gmail.com,Meena,Jain,40,9933445566
