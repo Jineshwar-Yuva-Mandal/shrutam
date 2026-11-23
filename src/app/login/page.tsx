@@ -82,7 +82,7 @@ async function getLoginDestination(supabase: NonNullable<ReturnType<typeof creat
   }
 
   const { data: tenants } = await supabase.from("paathshalas").select("slug").in("id", activeTenantIds).eq("is_active", true);
-  if (!tenants?.length) return "/signup";
+  if (!tenants?.length) return "/spaces";
   if (tenants.length === 1 && !hasPendingTeacherRequest && !hasPendingFamilyRequest) return `/${tenants[0].slug}`;
   return "/spaces";
 }
