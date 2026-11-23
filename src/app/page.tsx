@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowDown, ArrowRight, BookOpen, CalendarDays, ClipboardCheck } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarDays, ClipboardCheck } from "lucide-react";
 import BrandLogo from "@/components/brand-logo";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -25,10 +25,9 @@ export default async function HomePage() {
           <p className="landing-kicker">A JYM-Digital initiative · Rajajinagar</p>
           <h1 id="landing-title"><BrandLogo variant="text" className="landing-hero-logo" alt="Shrutam" priority /></h1>
           <p className="landing-hero-heading">A shared home for paathshala learning.</p>
-          <p className="landing-hero-description">Bring students, teachers, classes, courses, and attendance together in one welcoming space, shaped around the way our community learns.</p>
+          <p className="landing-hero-description">Classes, course paths, and attendance, all in one welcoming space for our paathshala community.</p>
           <div className="landing-hero-actions">
             <Link className="landing-button" href="/signup">Join your paathshala <ArrowRight size={16} /></Link>
-            <a className="landing-text-link" href="#platform">Explore Shrutam <ArrowDown size={15} /></a>
           </div>
         </div>
 
