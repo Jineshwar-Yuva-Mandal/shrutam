@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ArrowRight, School } from "lucide-react";
 import BrandLogo from "@/components/brand-logo";
 import PaathshalaCodeForm from "@/components/paathshala-code-form";
+import SignOutButton from "@/components/sign-out-button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type Space = { slug: string; name: string; city: string; roles: string[] };
@@ -68,7 +69,7 @@ function SpacesList({ spaces, pendingRequests }: Readonly<{ spaces: Space[]; pen
     <header className="platform-header spaces-header">
       <div className="spaces-header-inner">
         <Link className="spaces-brand-link" href="/" aria-label="Shrutam home"><BrandLogo variant="complete" className="spaces-brand-logo" priority /></Link>
-        <span className="role-label">Your spaces</span>
+        <SignOutButton />
       </div>
     </header>
     <div className="spaces-content">

@@ -3,6 +3,7 @@
 import { SyntheticEvent, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import BrandLogo from "@/components/brand-logo";
+import SignOutButton from "@/components/sign-out-button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function JoinPaathshalaPage() {
@@ -108,7 +109,7 @@ export default function JoinPaathshalaPage() {
   if (joinRole === "teacher") submitLabel = teacherRequestPending ? "Request pending approval" : "Request teacher access";
   if (busy) submitLabel = "Sending request...";
 
-  return <main className="auth-screen"><div className="auth-aside"><BrandLogo variant="complete" className="auth-aside-logo" priority /><p className="auth-verse">Learning begins<br />with belonging.</p><div className="auth-aside-bottom">{joinRole === "teacher" ? "Teacher access is approved by an active teacher." : "Each learner enrollment is reviewed separately."}</div></div><section className="auth-content"><div className="auth-panel"><p className="eyebrow">{joinRole === "teacher" ? "Teacher access" : "Family enrollment"}</p><h1>Join {tenantName}</h1><p className="heading-note">{joinRole === "teacher" ? "Request teacher access to this paathshala." : "Submit an enrollment request for one child at a time."}</p>
+  return <main className="auth-screen"><div className="auth-aside"><BrandLogo variant="complete" className="auth-aside-logo" priority /><p className="auth-verse">Learning begins<br />with belonging.</p><div className="auth-aside-bottom">{joinRole === "teacher" ? "Teacher access is approved by an active teacher." : "Each learner enrollment is reviewed separately."}</div></div><section className="auth-content"><div className="auth-panel"><p className="eyebrow">{joinRole === "teacher" ? "Teacher access" : "Family enrollment"}</p><h1>Join {tenantName}</h1><p className="heading-note">{joinRole === "teacher" ? "Request teacher access to this paathshala." : "Submit an enrollment request for one child at a time."}</p><div className="join-signout-row"><SignOutButton /></div>
     <form className="auth-form" onSubmit={submit}>
       {joinRole === "parent" && <><label className="form-label">Learner name<input className="form-control" name="learnerName" required /></label><label className="form-label">Learning level<input className="form-control" name="level" placeholder="If known" /></label></>}
       {message && <output className="auth-message">{message}</output>}
