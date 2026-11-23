@@ -355,6 +355,7 @@ h1 { margin-bottom: 7px; font-family: var(--font-display); font-size: 31px; font
 .landing-hero-heading { max-width: 540px; margin: 17px 0 13px; font-family: var(--font-display); font-size: 27px; line-height: 1.35; }
 .landing-hero-description { max-width: 510px; margin: 0; color: #6f6265; font-size: 14px; line-height: 1.8; }
 .landing-hero-actions { display: flex; align-items: center; gap: 25px; margin-top: 27px; }
+.landing-scroll-cue { display: none; }
 .landing-text-link { display: inline-flex; align-items: center; gap: 8px; color: var(--burgundy); font-size: 11px; font-weight: 800; text-decoration: none; }
 .landing-hero-note { margin: 28px 0 0; color: #7e7375; font-size: 10px; }
 .landing-emblem-stage { display: grid; min-height: 405px; place-items: center; }
@@ -382,7 +383,7 @@ h1 { margin-bottom: 7px; font-family: var(--font-display); font-size: 31px; font
 .landing-community-copy { padding-top: 26px; }
 .landing-community-copy p { margin: 0 0 14px; color: #e8e7da; font-size: 12px; line-height: 1.8; }
 .landing-community-seal { display: grid; justify-items: end; }
-.landing-community-seal img { display: block; width: 160px; height: auto; border-radius: 50%; box-shadow: 0 0 24px 8px #d6a34f55; filter: drop-shadow(0 8px 18px #00000038); }
+.landing-community-seal img { display: block; width: 160px; height: auto; padding: 8px; border-radius: 50%; background: #fff; box-shadow: 0 0 24px 8px #d6a34f55; filter: drop-shadow(0 8px 18px #00000038); }
 .landing-motto { display: flex; align-items: center; justify-content: center; margin-top: 48px; padding-top: 18px; border-top: 1px solid #ffffff35; color: #f1d28d; text-align: center; }
 .landing-motto strong { font-family: var(--font-display), "Noto Serif Devanagari", serif; font-size: 17px; font-weight: 800; white-space: nowrap; }
 .landing-cta { display: flex; align-items: center; justify-content: space-between; gap: 35px; padding: 65px max(32px, calc((100% - 1180px) / 2)); background: #fbfaf7; }
@@ -395,30 +396,41 @@ h1 { margin-bottom: 7px; font-family: var(--font-display); font-size: 31px; font
 .landing-footer p { margin: 0; color: #7e7375; font-size: 10px; }
 
 @media (max-width: 760px) {
-  .landing-hero { min-height: 100vh; min-height: 100svh; padding: 32px 0; }
+  .landing-hero { position: relative; min-height: 100vh; min-height: 100svh; padding: 70px 0 82px; }
   .landing-hero-inner { grid-template-columns: 1fr; gap: 0; width: calc(100% - 40px); min-height: 0; }
-  .landing-hero-copy { padding: 0; }
-  .landing-hero-logo { width: min(310px, 100%); }
-  .landing-hero-heading { max-width: 420px; font-size: 23px; }
-  .landing-hero-description { font-size: 13px; }
+  .landing-hero-copy { max-width: 420px; margin: 0 auto; padding: 0; text-align: center; }
+  .landing-kicker { margin-bottom: 20px; font-size: 9px; letter-spacing: 1.05px; }
+  .landing-hero h1 { display: flex; justify-content: center; }
+  .landing-hero-logo { width: min(290px, 100%); }
+  .landing-hero-heading { max-width: 360px; margin: 17px auto 12px; font-size: 23px; }
+  .landing-hero-description { max-width: 340px; margin: 0 auto; font-size: 13px; }
+  .landing-hero-actions { justify-content: center; margin-top: 24px; }
+  .landing-hero-actions .landing-button { min-width: 230px; }
+  .landing-scroll-cue { position: absolute; bottom: 23px; left: 50%; display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .8px; text-decoration: none; transform: translateX(-50%); }
+  .landing-scroll-cue svg { color: var(--gold); }
   .landing-emblem-stage { display: none; }
   .landing-platform { padding: 54px 20px 58px; }
-  .landing-section-heading { grid-template-columns: 1fr; gap: 13px; }
+  .landing-section-heading { grid-template-columns: 1fr; justify-items: center; gap: 13px; text-align: center; }
   .landing-section-heading .landing-kicker { grid-column: auto; margin-bottom: 0; }
   .landing-section-heading h2, .landing-community h2 { font-size: 31px; }
+  .landing-community h2 { font-size: 24px; line-height: 1.3; }
   .landing-section-heading > p:last-child { max-width: 480px; }
   .landing-features { grid-template-columns: 1fr; margin-top: 30px; }
-  .landing-feature, .landing-feature + .landing-feature { min-height: 0; padding: 21px 30px 22px 0; border-left: 0; }
+  .landing-feature, .landing-feature + .landing-feature { min-height: 0; padding: 21px 0 22px; border-left: 0; text-align: center; }
   .landing-feature + .landing-feature { border-top: 1px solid #d6cec4; }
+  .landing-feature-number { position: static; display: block; margin: 0 auto 10px; }
+  .landing-feature svg { display: block; margin: 0 auto; }
   .landing-feature h3 { margin-top: 15px; }
+  .landing-feature p { margin-right: auto; margin-left: auto; }
   .landing-community { padding: 54px 20px 27px; }
-  .landing-community-inner { grid-template-columns: 1fr; gap: 14px; }
-  .landing-community-copy { padding-top: 0; }
-  .landing-community-seal { justify-items: start; margin-top: 8px; }
-  .landing-community-seal img { width: 132px; }
+  .landing-community-inner { grid-template-columns: 1fr; gap: 14px; text-align: center; }
+  .landing-community-copy { max-width: 480px; margin: 0 auto; padding-top: 0; }
+  .landing-community-copy p { text-align: center; }
+  .landing-community-seal { display: none; }
   .landing-motto { margin-top: 28px; }
   .landing-motto strong { font-size: 15px; }
-  .landing-cta { align-items: flex-start; flex-direction: column; gap: 24px; padding: 49px 20px; }
+  .landing-cta { align-items: center; flex-direction: column; gap: 24px; padding: 49px 20px; text-align: center; }
   .landing-cta h2 { font-size: 27px; }
-  .landing-footer { align-items: flex-start; flex-direction: column; justify-content: center; gap: 9px; padding: 17px 20px; }
+  .landing-cta-actions { justify-items: center; width: 100%; }
+  .landing-footer { align-items: center; flex-direction: column; justify-content: center; gap: 9px; padding: 17px 20px; text-align: center; }
 }

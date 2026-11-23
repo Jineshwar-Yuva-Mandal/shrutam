@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BookOpen, CalendarDays, ClipboardCheck } from "lucide-react";
+import { ArrowDown, ArrowRight, BookOpen, CalendarDays, ClipboardCheck } from "lucide-react";
 import BrandLogo from "@/components/brand-logo";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -35,6 +35,7 @@ export default async function HomePage() {
           <BrandLogo variant="icon" className="landing-emblem" alt="" priority />
         </div>
       </div>
+      <a className="landing-scroll-cue" href="#platform"><span>Scroll to discover</span><ArrowDown size={14} /></a>
     </section>
 
     <section className="landing-platform" id="platform" aria-labelledby="platform-title">
