@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Shrutam | Paathshala, connected",
+  title: "Shrutam",
   description: "A shared online home for paathshala learning, classes, attendance, and community.",
 };
 
