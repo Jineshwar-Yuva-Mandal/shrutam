@@ -29,7 +29,7 @@ create table public.paathshala_memberships (
   status public.membership_status not null default 'pending',
   created_at timestamptz not null default now(),
   unique (paathshala_id, user_id, role),
-  constraint paathshala_memberships_role_parent_teacher_check check (role in ('teacher', 'parent'))
+  constraint paathshala_memberships_role_teacher_student_check check (role in ('teacher', 'student'))
 );
 
 create index memberships_user_tenant_idx on public.paathshala_memberships(user_id, paathshala_id, status);

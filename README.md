@@ -1,16 +1,16 @@
 # Shrutam
 
-Multi-tenant paathshala portal with parent and teacher memberships, plus a separate platform-admin console.
+Multi-tenant paathshala portal with Student and Teacher memberships, plus a separate platform-admin console.
 
-Each person has one Auth login. Parent and teacher roles belong to a person’s membership in a specific paathshala, so the same login can be a teacher in one space, a parent in another, or both in the same space. Login routes users with multiple spaces to `/spaces`; capabilities come from each paathshala membership.
+Each person has one Auth login. Student and Teacher roles belong to a person’s membership in a specific paathshala, so the same login can hold either or both roles in multiple spaces. After login, users choose a role-specific view from `/spaces` when they have more than one option.
 
-Parents manage all their children from one account, with a separate enrollment request for each child. Teachers request access by paathshala code; an active teacher or platform administrator approves the request. Teachers can manage paathshala records and may be assigned to zero or more classes. Students do not sign in separately.
+Students request access using a paathshala code; an active teacher or platform administrator approves the membership and creates the student profile linked to that Auth user. Teachers can request access the same way and may be assigned to zero or more classes. Student access is limited to the student's own profile, enrolled classes, and attendance history.
 
-Each paathshala maintains its own course catalogue. Courses can contain nested topics, and a class can be assigned multiple courses. Parents see the class teacher and attached courses in their family view.
+Each paathshala maintains its own course catalogue. Courses can contain nested topics, and a class can be assigned multiple courses. Students see the classes and courses assigned to their enrollment.
 
 Classes can meet on multiple weekdays. Attendance is stored by class and actual session date, so changing a recurring schedule does not rewrite recorded sessions. Events have a paid/free flag; payment collection is not implemented.
 
-Teachers can create scenario trackers for selected classes and mark each learner’s status. Parents can view tracker status for their linked children but cannot edit it.
+Teachers can create scenario trackers for selected classes and mark each learner’s status. Students can view tracker status for their enrolled classes but cannot edit it.
 
 Paathshala changes are recorded in `public.audit_logs`, including the actor and before/after row data. Teachers can review the tenant activity log; platform administrators can review platform-level changes.
 
@@ -42,7 +42,7 @@ The desired database schema is the source of truth in `supabase/schemas/`, split
 	values ('<auth-user-uuid>');
 	```
 
-	That account can sign in at `/platform` to provision paathshalas and approve the first teacher. New teachers can then request access by tenant code.
+	That account can sign in at `/platform` to provision paathshalas and approve Teacher or Student memberships. New members can request access by tenant code.
 
 The GitHub integration deploys migration files, not declarative schema files. A schema edit must be synced into a reviewed migration before it can be deployed.
 

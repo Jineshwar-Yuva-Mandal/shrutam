@@ -30,7 +30,7 @@ function SignupForm() {
     const email = typeof emailValue === "string" ? emailValue.trim() : "";
     const password = typeof passwordValue === "string" ? passwordValue : "";
     const tenantSlug = typeof tenantSlugValue === "string" ? tenantSlugValue.trim().toLowerCase() : "";
-    const accountType = accountTypeValue === "teacher" ? "teacher" : "parent";
+    const accountType = accountTypeValue === "teacher" ? "teacher" : "student";
     setBusy(true);
     const next = `/join/${encodeURIComponent(tenantSlug)}?role=${accountType}`;
     const callback = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
@@ -53,9 +53,9 @@ function SignupForm() {
     setMessage("Check your email to confirm your account. We’ll continue with the paathshala request after confirmation.");
   }
 
-  return <AuthFrame eyebrow="Join your community" title="Create an account" description="Choose a parent or teacher account for your paathshala.">
+  return <AuthFrame eyebrow="Join your community" title="Create an account" description="Choose a student or teacher account for your paathshala.">
     <form className="auth-form" onSubmit={submit}>
-      <label className="form-label">Join this paathshala as<select className="form-control" name="accountType" defaultValue="parent"><option value="parent">Parent</option><option value="teacher">Teacher</option></select></label>
+      <label className="form-label">Join this paathshala as<select className="form-control" name="accountType" defaultValue="student"><option value="student">Student</option><option value="teacher">Teacher</option></select></label>
       <label className="form-label">Your name<input className="form-control" name="fullName" autoComplete="name" required /></label>
       <label className="form-label">Email address<input className="form-control" type="email" name="email" autoComplete="email" required /></label>
       <label className="form-label">Password<input className="form-control" type="password" name="password" autoComplete="new-password" minLength={8} required /></label>

@@ -9,12 +9,14 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Tenant = { id: string; name: string; slug: string; city: string };
 type TeacherRequest = { id: string; name: string; tenantName: string; createdAt: string };
+type StudentRequest = { id: string; name: string; tenantName: string; createdAt: string };
 
 export default function PlatformPortal({ viewerName = "Platform admin" }: Readonly<{ viewerName?: string }>) {
   const router = useRouter();
   const [supabase] = useState(() => createSupabaseBrowserClient());
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [teacherRequests, setTeacherRequests] = useState<TeacherRequest[]>([]);
+  const [studentRequests, setStudentRequests] = useState<StudentRequest[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -23,18 +25,21 @@ export default function PlatformPortal({ viewerName = "Platform admin" }: Readon
     let active = true;
 
     async function loadPlatformData(client: NonNullable<typeof supabase>) {
-      const [tenantResult, requestResult] = await Promise.all([
+      const [tenantResult, teacherResult, studentResult] = await Promise.all([
         client.from("paathshalas").select("id, name, slug, city").order("name"),
         client.from("paathshala_memberships").select("id, user_id, paathshala_id, created_at").eq("role", "teacher").eq("status", "pending").order("created_at"),
+        client.from("paathshala_memberships").select("id, user_id, paathshala_id, created_at").eq("role", "student").eq("status", "pending").order("created_at"),
       ]);
       if (!active) return;
-      const error = tenantResult.error ?? requestResult.error;
+      const error = tenantResult.error ?? teacherResult.error ?? studentResult.error;
       if (error) {
         setMessage(error.message);
         return;
       }
 
-      const requests = requestResult.data ?? [];
+      const teacherMemberships = teacherResult.data ?? [];
+      const studentMemberships = studentResult.data ?? [];
+      const requests = [...teacherMemberships, ...studentMemberships];
       const tenantIds = [...new Set(requests.map((request) => request.paathshala_id))];
       const userIds = [...new Set(requests.map((request) => request.user_id))];
       const [requestTenants, profiles] = await Promise.all([
@@ -49,12 +54,14 @@ export default function PlatformPortal({ viewerName = "Platform admin" }: Readon
       const tenantNames = new Map((requestTenants.data ?? []).map((tenant) => [tenant.id, tenant.name]));
       const profileNames = new Map((profiles.data ?? []).map((profile) => [profile.user_id, profile.full_name]));
       setTenants((tenantResult.data ?? []) as Tenant[]);
-      setTeacherRequests(requests.map((request) => ({
+      const mapRequest = (request: (typeof requests)[number]) => ({
         id: request.id,
         name: profileNames.get(request.user_id) || "Teacher applicant",
         tenantName: tenantNames.get(request.paathshala_id) || "Paathshala",
         createdAt: request.created_at,
-      })));
+      });
+      setTeacherRequests(teacherMemberships.map(mapRequest));
+      setStudentRequests(studentMemberships.map((request) => ({ ...mapRequest(request), name: profileNames.get(request.user_id) || "Student applicant" })));
     }
 
     void loadPlatformData(client);
@@ -94,6 +101,13 @@ export default function PlatformPortal({ viewerName = "Platform admin" }: Readon
     if (!error) setTeacherRequests((current) => current.filter((request) => request.id !== requestId));
   }
 
+  async function approveStudent(requestId: string) {
+    if (!supabase) return;
+    const { error } = await supabase.rpc("approve_student_membership", { p_membership_id: requestId });
+    setMessage(error ? error.message : "Student access approved");
+    if (!error) setStudentRequests((current) => current.filter((request) => request.id !== requestId));
+  }
+
   async function signOut() {
     if (!supabase) return;
     await supabase.auth.signOut();
@@ -107,7 +121,7 @@ export default function PlatformPortal({ viewerName = "Platform admin" }: Readon
       <div className="platform-user"><span>{viewerName}</span><button type="button" className="secondary-button" onClick={signOut}><LogOut size={14} /> Sign out</button></div>
     </header>
     <div className="platform-content">
-      <div className="page-heading"><div><p className="eyebrow">Platform operations</p><h1>Paathshalas</h1><p className="heading-note">Provision community spaces and review teacher access.</p></div><span className="pill"><ShieldCheck size={12} /> Platform admin</span></div>
+      <div className="page-heading"><div><p className="eyebrow">Platform operations</p><h1>Paathshalas</h1><p className="heading-note">Provision community spaces and review membership requests.</p></div><span className="pill"><ShieldCheck size={12} /> Platform admin</span></div>
       {!supabase && <div className="notice">Supabase is not configured. Add the project URL and public key to manage paathshalas.</div>}
       {message && <output className="notice platform-message">{message}</output>}
       <div className="content-grid">
@@ -124,6 +138,10 @@ export default function PlatformPortal({ viewerName = "Platform admin" }: Readon
         <section className="panel">
           <div className="panel-header"><div><h2 className="panel-title">Teacher access requests</h2><p className="panel-subtitle">Approve a teacher to activate their paathshala membership.</p></div><span className="pill warm">{teacherRequests.length} pending</span></div>
           <div className="panel-body">{teacherRequests.length === 0 ? <div className="empty-state">No pending teacher requests.</div> : teacherRequests.map((request) => <div className="student-row" key={request.id}><div className="row-main"><p className="row-title">{request.name}</p><p className="row-detail">{request.tenantName} · {new Date(request.createdAt).toLocaleDateString()}</p></div><button type="button" className="secondary-button" onClick={() => approveTeacher(request.id)}><Check size={13} /> Approve</button></div>)}</div>
+        </section>
+        <section className="panel">
+          <div className="panel-header"><div><h2 className="panel-title">Student access requests</h2><p className="panel-subtitle">Approve a student to create their paathshala profile.</p></div><span className="pill warm">{studentRequests.length} pending</span></div>
+          <div className="panel-body">{studentRequests.length === 0 ? <div className="empty-state">No pending Student requests.</div> : studentRequests.map((request) => <div className="student-row" key={request.id}><div className="row-main"><p className="row-title">{request.name}</p><p className="row-detail">{request.tenantName} · {new Date(request.createdAt).toLocaleDateString()}</p></div><button type="button" className="secondary-button" onClick={() => approveStudent(request.id)}><Check size={13} /> Approve</button></div>)}</div>
         </section>
       </div>
       <section className="panel" style={{ marginTop: 16 }}>

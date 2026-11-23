@@ -20,26 +20,26 @@ import { SyntheticEvent, useEffect, useState } from "react";
 import BrandLogo from "@/components/brand-logo";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-type Role = "teacher" | "parent";
+type Role = "teacher" | "student";
 type Section = "overview" | "attendance" | "students" | "classes" | "trackers" | "courses" | "events" | "activity";
 type AttendanceStatus = "Present" | "Absent" | "Excused";
 type AttendanceAnalytics = Record<string, { present: number; absent: number; excused: number }>;
-type PortalDialog = "student" | "enrollment" | "event" | "class" | "course" | "tracker";
+type PortalDialog = "event" | "class" | "course" | "tracker";
 
-type Student = { id: string | number; name: string; level: string; parent: string };
+type Student = { id: string; userId: string | null; name: string; level: string };
 type CommunityEvent = { id: string | number; title: string; date: string; month: string; place: string; registered: boolean; isPaid: boolean; startsAt?: string };
 type ClassItem = { id: string; name: string; teacher: string; teacherUserId: string | null; weekdays: number[]; startsAt: string; time: string; courseIds: string[]; courseTitles: string[] };
 type StudentTracker = { id: string; title: string; description: string; classIds: string[]; studentIds: string[]; markedStudentIds: string[] };
 type CourseItem = { id: string; title: string; description: string; parentCourseId: string | null };
 type TeacherOption = { id: string; name: string };
-type EnrollmentRequest = { id: string; learnerName: string; level: string; createdAt: string; parentName: string; status: string };
+type StudentAccessRequest = { id: string; userId: string; name: string; createdAt: string; status: string };
 type TeacherRequest = { id: string; name: string; createdAt: string };
 type AuditEntry = { id: string; actorName: string; tableName: string; operation: string; recordId: string; oldValues: Record<string, unknown> | null; newValues: Record<string, unknown> | null; changedAt: string };
 
 const navItems: { key: Section; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
   { key: "attendance", label: "Attendance", icon: ClipboardCheck },
-  { key: "students", label: "Students & families", icon: Users },
+  { key: "students", label: "Students", icon: Users },
   { key: "classes", label: "Classes", icon: BookOpen },
   { key: "trackers", label: "Trackers", icon: ClipboardCheck },
   { key: "courses", label: "Courses", icon: GraduationCap },
@@ -49,13 +49,13 @@ const navItems: { key: Section; label: string; icon: typeof LayoutDashboard }[] 
 
 const roleLabels: Record<Role, string> = {
   teacher: "Teacher",
-  parent: "Parent",
+  student: "Student",
 };
 
 const sectionCopy: Record<Section, { title: string; eyebrow: string; description: string }> = {
-  overview: { title: "Your learning community", eyebrow: "Paathshala", description: "Your classes, families, and community in one place." },
+  overview: { title: "Your learning community", eyebrow: "Paathshala", description: "Your classes and community in one place." },
   attendance: { title: "Attendance", eyebrow: "Weekly learning", description: "Keep each class roster accurate and visible to families." },
-  students: { title: "Students & families", eyebrow: "Paathshala community", description: "A shared view of learners and their family connections." },
+  students: { title: "Students", eyebrow: "Paathshala community", description: "Student profiles, class assignments, and access requests." },
   classes: { title: "Classes", eyebrow: "Learning groups", description: "Weekly sessions, teachers, and course levels." },
   trackers: { title: "Student trackers", eyebrow: "Paathshala activities", description: "Track scenario-based checklists across selected classes." },
   courses: { title: "Courses", eyebrow: "Paathshala curriculum", description: "Organize learning topics and nested courses." },
@@ -76,7 +76,7 @@ type PortalProps = Readonly<{
 
 export default function Portal({ tenantSlug, tenantId, tenantName, tenantCity, viewerRoles, viewerName, userId, availableTenants }: PortalProps) {
   const router = useRouter();
-  const { role, roleLabel, hasTeacherRole, hasParentRole } = getPortalRoleContext(viewerRoles);
+  const { role, roleLabel, hasTeacherRole, hasStudentRole } = getPortalRoleContext(viewerRoles);
   const [section, setSection] = useState<Section>("overview");
   const [students, setStudents] = useState<Student[]>([]);
   const [events, setEvents] = useState<CommunityEvent[]>([]);
@@ -88,9 +88,8 @@ export default function Portal({ tenantSlug, tenantId, tenantName, tenantCity, v
   const [attendanceDate, setAttendanceDate] = useState(getLocalDate());
   const [attendanceAnalytics, setAttendanceAnalytics] = useState<AttendanceAnalytics>({});
   const [attendanceSessionCount, setAttendanceSessionCount] = useState(0);
-  const [familyStudentIds, setFamilyStudentIds] = useState<string[]>([]);
-  const [familyRequests, setFamilyRequests] = useState<EnrollmentRequest[]>([]);
-  const [joinRequests, setJoinRequests] = useState<EnrollmentRequest[]>([]);
+  const [myStudentIds, setMyStudentIds] = useState<string[]>([]);
+  const [studentRequests, setStudentRequests] = useState<StudentAccessRequest[]>([]);
   const [teacherRequests, setTeacherRequests] = useState<TeacherRequest[]>([]);
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [classRosterIds, setClassRosterIds] = useState<string[]>([]);
@@ -111,7 +110,7 @@ export default function Portal({ tenantSlug, tenantId, tenantName, tenantCity, v
     let active = true;
     const supabase = createSupabaseBrowserClient();
     if (!supabase) return;
-    void loadPortalData(supabase, tenantId, userId, role, hasParentRole, hasTeacherRole).then((data) => {
+    void loadPortalData(supabase, tenantId, userId, role, hasStudentRole, hasTeacherRole).then((data) => {
       if (!active) return;
       setStudents(data.students);
       setEvents(data.events);
@@ -122,11 +121,10 @@ export default function Portal({ tenantSlug, tenantId, tenantName, tenantCity, v
       setAttendance(data.attendance);
       setAttendanceAnalytics(data.attendanceAnalytics);
       setAttendanceSessionCount(data.attendanceSessionCount);
-      setFamilyStudentIds(data.familyStudentIds);
+      setMyStudentIds(data.myStudentIds);
       setClassRosterIds(data.classRosterIds);
       setSelectedClassId(data.selectedClassId);
-      setFamilyRequests(data.familyRequests);
-      setJoinRequests(data.joinRequests);
+      setStudentRequests(data.studentRequests);
       setTeacherRequests(data.teacherRequests);
       setAuditEntries(data.auditEntries);
       setLiveLoading(false);
@@ -136,7 +134,7 @@ export default function Portal({ tenantSlug, tenantId, tenantName, tenantCity, v
       setLiveLoading(false);
     });
     return () => { active = false; };
-  }, [role, hasParentRole, hasTeacherRole, tenantId, userId]);
+  }, [role, hasStudentRole, hasTeacherRole, tenantId, userId]);
 
   function notify(message: string) {
     setToast(message);
@@ -200,69 +198,6 @@ export default function Portal({ tenantSlug, tenantId, tenantName, tenantCity, v
     }
     setEvents((current) => current.map((event) => event.id === eventId ? { ...event, registered: !event.registered } : event));
     notify(target.registered ? "Registration cancelled" : "You’re on the guest list");
-  }
-
-  async function addStudent(event: SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const name = readFormText(formData, "name");
-    const level = readFormText(formData, "level");
-    if (!name || !level) return;
-    const supabase = createSupabaseBrowserClient();
-    if (!supabase) {
-      notify("Supabase is not configured");
-      return;
-    }
-    const result = await persistStudentInput(supabase, tenantId, userId, role, name, level);
-    if (result.kind === "error") {
-      notify(result.message);
-      return;
-    }
-    if (result.kind === "request") {
-      setFamilyRequests((current) => [...current, {
-        id: result.id,
-        learnerName: name,
-        level,
-        createdAt: new Date().toISOString(),
-        parentName: currentUser,
-        status: "pending",
-      }]);
-      setDialog(null);
-      notify("Enrollment request sent for paathshala review");
-      return;
-    }
-    setStudents((current) => [...current, result.student]);
-    setDialog(null);
-    notify("Student added to this paathshala");
-  }
-
-  async function requestChildEnrollment(event: SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const name = readFormText(formData, "name");
-    const level = readFormText(formData, "level");
-    if (!name || !level) return;
-    const supabase = createSupabaseBrowserClient();
-    if (!supabase) {
-      notify("Supabase is not configured");
-      return;
-    }
-    const result = await persistStudentInput(supabase, tenantId, userId, "parent", name, level);
-    if (result.kind === "error") {
-      notify(result.message);
-      return;
-    }
-    if (result.kind !== "request") return;
-    setFamilyRequests((current) => [...current, {
-      id: result.id,
-      learnerName: name,
-      level,
-      createdAt: new Date().toISOString(),
-      parentName: currentUser,
-      status: "pending",
-    }]);
-    setDialog(null);
-    notify("Enrollment request sent for paathshala review");
   }
 
   async function addEvent(event: SyntheticEvent<HTMLFormElement>) {
@@ -507,22 +442,22 @@ export default function Portal({ tenantSlug, tenantId, tenantName, tenantCity, v
     notify("Attendance saved");
   }
 
-  async function approveJoinRequest(joinRequestId: string) {
-    const request = familyRequests.find((item) => item.id === joinRequestId);
+  async function approveStudentMembership(membershipId: string) {
+    const request = studentRequests.find((item) => item.id === membershipId);
     if (!request) return;
     const supabase = createSupabaseBrowserClient();
     if (!supabase) {
       notify("Supabase is not configured");
       return;
     }
-    const { data: studentId, error } = await supabase.rpc("approve_family_join_request", { p_request_id: joinRequestId });
+    const { data: studentId, error } = await supabase.rpc("approve_student_membership", { p_membership_id: membershipId });
     if (error) {
       notify(error.message);
       return;
     }
-    setFamilyRequests((current) => current.filter((item) => item.id !== joinRequestId));
-    setStudents((current) => [...current, { id: studentId, name: request.learnerName, level: request.level, parent: "" }]);
-    notify(`${request.learnerName} added to this paathshala`);
+    setStudentRequests((current) => current.filter((item) => item.id !== membershipId));
+    setStudents((current) => [...current, { id: studentId, userId: request.userId, name: request.name, level: "Not set" }]);
+    notify(`${request.name} added to this paathshala`);
   }
 
   async function approveTeacherRequest(membershipId: string) {
@@ -694,16 +629,13 @@ export default function Portal({ tenantSlug, tenantId, tenantName, tenantCity, v
             {section === "events" && role === "teacher" && <button className="primary-button" onClick={() => setDialog("event")}><Plus size={15} /> Create event</button>}
             {section === "trackers" && hasTeacherRole && <button className="primary-button" onClick={() => setDialog("tracker")}><Plus size={15} /> Create tracker</button>}
             {section === "courses" && role === "teacher" && <button className="primary-button" onClick={() => setDialog("course")}><Plus size={15} /> Create course</button>}
-            {section === "students" && hasParentRole && !hasTeacherRole && <button type="button" className="secondary-button" onClick={() => router.push(`/join/${tenantSlug}?role=teacher`)}>Request teacher access</button>}
-            {section === "students" && <button type="button" className="secondary-button" onClick={() => setDialog("enrollment")}><Plus size={15} /> Request child enrollment</button>}
-            {section === "students" && hasTeacherRole && <button type="button" className="primary-button" onClick={() => setDialog("student")}><Plus size={15} /> Add student</button>}
           </div>
 
           {liveLoading && <output className="notice">Loading paathshala records...</output>}
           {liveError && <div className="notice" role="alert">Couldn’t load paathshala records: {liveError}</div>}
-          {section === "overview" && <Overview role={role} hasParentRole={hasParentRole} students={students} familyStudentIds={familyStudentIds} classes={classes} events={events} attendance={attendance} attendanceRate={attendanceRate} attendanceAnalytics={attendanceAnalytics} attendanceDate={attendanceDate} classRosterIds={classRosterIds} selectedClassId={selectedClassId} onClassChange={changeClass} onAttendanceChange={updateAttendance} onSaveAttendance={saveAttendance} onNavigate={setSection} onRegister={toggleRegistration} />}
+          {section === "overview" && <Overview role={role} hasStudentRole={hasStudentRole} students={students} myStudentIds={myStudentIds} classes={classes} events={events} attendance={attendance} attendanceRate={attendanceRate} attendanceAnalytics={attendanceAnalytics} attendanceDate={attendanceDate} classRosterIds={classRosterIds} selectedClassId={selectedClassId} onClassChange={changeClass} onAttendanceChange={updateAttendance} onSaveAttendance={saveAttendance} onNavigate={setSection} onRegister={toggleRegistration} />}
           {section === "attendance" && <AttendancePanel role={role} students={students} rosterIds={classRosterIds} classes={classes} selectedClassId={selectedClassId} onClassChange={changeClass} attendance={attendance} onChange={updateAttendance} onSave={saveAttendance} analytics={attendanceAnalytics} sessionCount={attendanceSessionCount} date={attendanceDate} onDateChange={changeAttendanceDate} />}
-          {section === "students" && <StudentsPanel role={role} hasParentRole={hasParentRole} students={students} classes={classes} familyStudentIds={familyStudentIds} familyRequests={familyRequests} teacherRequests={teacherRequests} joinRequests={joinRequests} onApprove={approveJoinRequest} onApproveTeacher={approveTeacherRequest} onEnroll={enrollStudent} />}
+          {section === "students" && <StudentsPanel role={role} students={students} classes={classes} studentRequests={studentRequests} teacherRequests={teacherRequests} onApproveStudent={approveStudentMembership} onApproveTeacher={approveTeacherRequest} onEnroll={enrollStudent} />}
           {section === "classes" && <ClassesPanel role={role} classes={classes} courses={courses} teachers={teacherOptions} onCreate={() => setDialog("class")} onAssignTeacher={assignClassTeacher} onAssignCourses={updateClassCourses} onScheduleChange={updateClassSchedule} />}
           {section === "trackers" && <StudentTrackersPanel role={role} trackers={studentTrackers} students={students} classes={classes} onToggle={toggleStudentTrackerRecord} />}
           {section === "courses" && role === "teacher" && <CoursesPanel courses={courses} />}
@@ -712,21 +644,18 @@ export default function Portal({ tenantSlug, tenantId, tenantName, tenantCity, v
         </main>
       </div>
 
-      {dialog && <PortalDialogForm dialog={dialog} role={role} teachers={teacherOptions} courses={courses} classes={classes} onClose={() => setDialog(null)} onStudent={addStudent} onEnrollment={requestChildEnrollment} onEvent={addEvent} onClass={addClass} onCourse={addCourse} onTracker={addStudentTracker} />}
+      {dialog && <PortalDialogForm dialog={dialog} teachers={teacherOptions} courses={courses} classes={classes} onClose={() => setDialog(null)} onEvent={addEvent} onClass={addClass} onCourse={addCourse} onTracker={addStudentTracker} />}
       {toast && <output className="toast">{toast}</output>}
     </div>
   );
 }
 
-function PortalDialogForm({ dialog, role, teachers, courses, classes, onClose, onStudent, onEnrollment, onEvent, onClass, onCourse, onTracker }: Readonly<{
+function PortalDialogForm({ dialog, teachers, courses, classes, onClose, onEvent, onClass, onCourse, onTracker }: Readonly<{
   dialog: PortalDialog;
-  role: Role;
   teachers: TeacherOption[];
   courses: CourseItem[];
   classes: ClassItem[];
   onClose: () => void;
-  onStudent: (event: SyntheticEvent<HTMLFormElement>) => void;
-  onEnrollment: (event: SyntheticEvent<HTMLFormElement>) => void;
   onEvent: (event: SyntheticEvent<HTMLFormElement>) => void;
   onClass: (event: SyntheticEvent<HTMLFormElement>) => void;
   onCourse: (event: SyntheticEvent<HTMLFormElement>) => void;
@@ -742,20 +671,6 @@ function PortalDialogForm({ dialog, role, teachers, courses, classes, onClose, o
     <div className="dialog-actions"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button type="submit" className="primary-button">Create class</button></div>
   </form>;
 
-  if (dialog === "student") {
-    form = <form onSubmit={onStudent} className="wide-form">
-      <label className="form-label">Student name<input className="form-control" name="name" required /></label>
-      <label className="form-label">Learning level<input className="form-control" name="level" placeholder="e.g. Bal Bodh 1" required /></label>
-      <div className="dialog-actions"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button type="submit" className="primary-button">Save student</button></div>
-    </form>;
-  }
-  if (dialog === "enrollment") {
-    form = <form onSubmit={onEnrollment} className="wide-form">
-      <label className="form-label">Learner name<input className="form-control" name="name" required /></label>
-      <label className="form-label">Learning level<input className="form-control" name="level" placeholder="If known" /></label>
-      <div className="dialog-actions"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button type="submit" className="primary-button">Submit enrollment request</button></div>
-    </form>;
-  }
   if (dialog === "event") {
     form = <form onSubmit={onEvent} className="wide-form">
       <label className="form-label">Event name<input className="form-control" name="title" required /></label>
@@ -794,86 +709,62 @@ function PortalDialogForm({ dialog, role, teachers, courses, classes, onClose, o
   }
 
   return <div className="backdrop"><dialog open className="dialog" aria-labelledby="dialog-title">
-    <div className="dialog-header"><h2 className="dialog-title" id="dialog-title">{getDialogTitle(dialog, role)}</h2><button type="button" className="icon-button" onClick={onClose} aria-label="Close"><X size={16} /></button></div>
+    <div className="dialog-header"><h2 className="dialog-title" id="dialog-title">{getDialogTitle(dialog)}</h2><button type="button" className="icon-button" onClick={onClose} aria-label="Close"><X size={16} /></button></div>
     {form}
   </dialog></div>;
 }
 
 type SupabaseBrowserClient = NonNullable<ReturnType<typeof createSupabaseBrowserClient>>;
-type StudentRow = { id: string; full_name: string; learning_level: string };
+type StudentRow = { id: string; user_id: string | null; full_name: string; learning_level: string };
 type ClassRow = { id: string; name: string; teacher_user_id: string | null; weekdays: number[]; starts_at: string | null };
 type CourseRow = { id: string; title: string; description: string; parent_course_id: string | null; sort_order: number };
 type ClassCourseRow = { class_id: string; course_id: string };
-type PersistStudentResult =
-  | { kind: "request"; id: string }
-  | { kind: "student"; student: Student }
-  | { kind: "error"; message: string };
 
 function readFormText(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
 }
 
-async function persistStudentInput(supabase: SupabaseBrowserClient, tenantId: string, userId: string, role: Role, name: string, level: string): Promise<PersistStudentResult> {
-  if (role === "parent") {
-    const { data, error } = await supabase.from("family_join_requests").insert({ paathshala_id: tenantId, requester_user_id: userId, learner_name: name, requested_level: level }).select("id").single();
-    if (error || !data) return { kind: "error", message: error?.message ?? "Could not submit this enrollment request" };
-    return { kind: "request", id: data.id };
-  }
-  const { data, error } = await supabase.from("students").insert({ paathshala_id: tenantId, full_name: name, learning_level: level }).select("id").single();
-  if (error || !data) return { kind: "error", message: error?.message ?? "Could not add this student" };
-  return { kind: "student", student: { id: data.id, name, level, parent: "" } };
-}
-
-async function loadPortalData(supabase: SupabaseBrowserClient, tenantId: string, userId: string, role: Role, hasParentRole: boolean, hasTeacherRole: boolean) {
-  const studentQuery = supabase.from("students").select("id, full_name, learning_level").eq("paathshala_id", tenantId).eq("is_active", true).order("full_name");
+async function loadPortalData(supabase: SupabaseBrowserClient, tenantId: string, userId: string, role: Role, hasStudentRole: boolean, hasTeacherRole: boolean) {
+  const studentQuery = supabase.from("students").select("id, user_id, full_name, learning_level").eq("paathshala_id", tenantId).eq("is_active", true).order("full_name");
   const eventQuery = supabase.from("events").select("id, title, starts_at, venue, is_paid").eq("paathshala_id", tenantId).eq("status", "published").order("starts_at");
   const courseQuery = supabase.from("courses").select("id, title, description, parent_course_id, sort_order").eq("paathshala_id", tenantId).eq("is_active", true).order("sort_order").order("title");
   const classCourseQuery = supabase.from("class_courses").select("class_id, course_id").eq("paathshala_id", tenantId);
-  const familyQuery = hasParentRole && !hasTeacherRole
-    ? supabase.from("parent_student_links").select("student_id, parent_user_id").eq("paathshala_id", tenantId).eq("parent_user_id", userId)
-    : supabase.from("parent_student_links").select("student_id, parent_user_id").eq("paathshala_id", tenantId);
   const classQuery = supabase.from("classes").select("id, name, teacher_user_id, weekdays, starts_at").eq("paathshala_id", tenantId).eq("is_active", true);
   const teacherQuery = supabase.from("paathshala_memberships").select("user_id").eq("paathshala_id", tenantId).eq("role", "teacher").eq("status", "active");
-  const [studentResult, eventResult, courseResult, classCourseResult, familyResult, classResult, registrationResult, teacherResult] = await Promise.all([
+  const [studentResult, eventResult, courseResult, classCourseResult, classResult, registrationResult, teacherResult] = await Promise.all([
     studentQuery,
     eventQuery,
     courseQuery,
     classCourseQuery,
-    familyQuery,
     classQuery,
     supabase.from("event_registrations").select("event_id").eq("paathshala_id", tenantId).eq("registrant_user_id", userId),
     teacherQuery,
   ]);
-  const firstError = studentResult.error ?? eventResult.error ?? courseResult.error ?? classCourseResult.error ?? familyResult.error ?? classResult.error ?? registrationResult.error ?? teacherResult.error;
+  const firstError = studentResult.error ?? eventResult.error ?? courseResult.error ?? classCourseResult.error ?? classResult.error ?? registrationResult.error ?? teacherResult.error;
   if (firstError) throw firstError;
 
   const studentRows = (studentResult.data ?? []) as StudentRow[];
-  const classRows = (classResult.data ?? []) as ClassRow[];
+  const allClassRows = (classResult.data ?? []) as ClassRow[];
   const courseRows = (courseResult.data ?? []) as CourseRow[];
   const classCourseRows = (classCourseResult.data ?? []) as ClassCourseRow[];
   const courseById = new Map(courseRows.map((course) => [course.id, course]));
-  const userFamilyLinks = (familyResult.data ?? []).filter((link) => link.parent_user_id === userId);
-  const linkedStudentIds = hasParentRole ? userFamilyLinks.map((link) => String(link.student_id)) : [];
+  const students = filterStudentsForRole(studentRows, role, userId);
+  const myStudentIds = hasStudentRole ? students.map((student) => student.id) : [];
+  const enrollmentResult = hasStudentRole && myStudentIds.length > 0
+    ? await supabase.from("class_enrollments").select("class_id, student_id").eq("paathshala_id", tenantId).in("student_id", myStudentIds)
+    : { data: [], error: null };
+  if (enrollmentResult.error) throw enrollmentResult.error;
+  const studentClassIds = new Set((enrollmentResult.data ?? []).map((enrollment) => enrollment.class_id));
+  const classRows = hasStudentRole ? allClassRows.filter((classRow) => studentClassIds.has(classRow.id)) : allClassRows;
   const firstClassId = classRows[0]?.id ?? null;
   const classRosterIds = await loadClassRosterIds(supabase, firstClassId);
-  const parentNames = await loadProfileNames(supabase, (familyResult.data ?? []).map((link) => link.parent_user_id));
-  const parentNamesByStudent = new Map<string, string[]>();
-  for (const link of familyResult.data ?? []) {
-    const names = parentNamesByStudent.get(String(link.student_id)) ?? [];
-    const name = parentNames.get(link.parent_user_id);
-    if (name && !names.includes(name)) names.push(name);
-    parentNamesByStudent.set(String(link.student_id), names);
-  }
-  const students = filterStudentsForRole(studentRows, role, userId, linkedStudentIds)
-    .map((student) => ({ ...student, parent: (parentNamesByStudent.get(String(student.id)) ?? []).join(", ") }));
-  const [attendance, attendanceHistory, familyAttendanceHistory] = await Promise.all([
+  const [attendance, attendanceHistory, studentAttendanceHistory] = await Promise.all([
     loadAttendanceForDate(supabase, firstClassId, getLocalDate()),
     loadClassAttendanceHistory(supabase, firstClassId),
-    hasParentRole ? loadStudentAttendanceHistory(supabase, linkedStudentIds) : Promise.resolve({ analytics: {} as AttendanceAnalytics, sessionCount: 0 }),
+    hasStudentRole ? loadStudentAttendanceHistory(supabase, myStudentIds) : Promise.resolve({ analytics: {} as AttendanceAnalytics, sessionCount: 0 }),
   ]);
-  const familyRequests = await loadFamilyEnrollmentRequests(supabase, tenantId, userId);
-  const joinRequests = hasTeacherRole ? await loadPendingJoinRequests(supabase, tenantId) : [];
+  const studentRequests = hasTeacherRole ? await loadPendingStudentRequests(supabase, tenantId) : [];
   const teacherRequests = hasTeacherRole ? await loadPendingTeacherRequests(supabase, tenantId) : [];
   const auditEntries = hasTeacherRole ? await loadAuditEntries(supabase, tenantId) : [];
   const activeTeacherIds = (teacherResult.data ?? []).map((teacher) => teacher.user_id);
@@ -908,13 +799,12 @@ async function loadPortalData(supabase: SupabaseBrowserClient, tenantId: string,
     courses,
     teacherOptions,
     attendance,
-    attendanceAnalytics: role === "parent" ? familyAttendanceHistory.analytics : attendanceHistory.analytics,
-    attendanceSessionCount: role === "parent" ? familyAttendanceHistory.sessionCount : attendanceHistory.sessionCount,
-    familyStudentIds: linkedStudentIds,
+    attendanceAnalytics: hasStudentRole ? studentAttendanceHistory.analytics : attendanceHistory.analytics,
+    attendanceSessionCount: hasStudentRole ? studentAttendanceHistory.sessionCount : attendanceHistory.sessionCount,
+    myStudentIds,
     classRosterIds,
     selectedClassId: firstClassId,
-    familyRequests,
-    joinRequests,
+    studentRequests,
     teacherRequests,
     auditEntries,
   };
@@ -1035,39 +925,22 @@ async function loadStudentAttendanceHistory(supabase: SupabaseBrowserClient, stu
   return { analytics, sessionCount: sessionIds.size };
 }
 
-async function loadPendingJoinRequests(supabase: SupabaseBrowserClient, tenantId: string): Promise<EnrollmentRequest[]> {
-  const { data, error } = await supabase.from("family_join_requests")
-    .select("id, requester_user_id, learner_name, requested_level, created_at")
+async function loadPendingStudentRequests(supabase: SupabaseBrowserClient, tenantId: string): Promise<StudentAccessRequest[]> {
+  const { data, error } = await supabase.from("paathshala_memberships")
+    .select("id, user_id, created_at")
     .eq("paathshala_id", tenantId)
+    .eq("role", "student")
     .eq("status", "pending")
     .order("created_at");
   if (error) throw error;
-  const requests = data ?? [];
-  const names = await loadProfileNames(supabase, requests.map((request) => request.requester_user_id));
-  return requests.map((request) => ({
-    id: request.id,
-    learnerName: request.learner_name,
-    level: request.requested_level,
-    createdAt: request.created_at,
-    parentName: names.get(request.requester_user_id) ?? "Family",
+  const memberships = data ?? [];
+  const names = await loadProfileNames(supabase, memberships.map((membership) => membership.user_id));
+  return memberships.map((membership) => ({
+    id: membership.id,
+    userId: membership.user_id,
+    name: names.get(membership.user_id) ?? "Student applicant",
+    createdAt: membership.created_at,
     status: "pending",
-  }));
-}
-
-async function loadFamilyEnrollmentRequests(supabase: SupabaseBrowserClient, tenantId: string, userId: string): Promise<EnrollmentRequest[]> {
-  const { data, error } = await supabase.from("family_join_requests")
-    .select("id, learner_name, requested_level, created_at, status")
-    .eq("paathshala_id", tenantId)
-    .eq("requester_user_id", userId)
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []).map((request) => ({
-    id: request.id,
-    learnerName: request.learner_name,
-    level: request.requested_level,
-    createdAt: request.created_at,
-    parentName: "",
-    status: request.status,
   }));
 }
 
@@ -1115,14 +988,13 @@ async function loadAuditEntries(supabase: SupabaseBrowserClient, tenantId: strin
   }));
 }
 
-function filterStudentsForRole(rows: StudentRow[], role: Role, userId: string, familyIds: string[]): Student[] {
+function filterStudentsForRole(rows: StudentRow[], role: Role, userId: string): Student[] {
   if (role === "teacher") return rows.map(mapStudent);
-  if (role === "parent") return rows.filter((student) => familyIds.includes(student.id)).map(mapStudent);
-  return [];
+  return rows.filter((student) => student.user_id === userId).map(mapStudent);
 }
 
 function mapStudent(student: StudentRow): Student {
-  return { id: student.id, name: student.full_name, level: student.learning_level, parent: "" };
+  return { id: student.id, userId: student.user_id, name: student.full_name, level: student.learning_level };
 }
 
 function mapEvent(event: { id: string; title: string; starts_at: string; venue: string; is_paid: boolean }, registeredEventIds: Set<string>): CommunityEvent {
@@ -1141,10 +1013,10 @@ function mapEvent(event: { id: string; title: string; starts_at: string; venue: 
 
 function getPortalRoleContext(roles: Role[]) {
   const hasTeacherRole = roles.includes("teacher");
-  const hasParentRole = roles.includes("parent");
-  const role: Role = hasTeacherRole ? "teacher" : "parent";
-  const roleLabel = hasTeacherRole && hasParentRole ? "Teacher & parent" : roleLabels[role];
-  return { role, roleLabel, hasTeacherRole, hasParentRole };
+  const hasStudentRole = roles.includes("student");
+  const role: Role = hasTeacherRole ? "teacher" : "student";
+  const roleLabel = hasTeacherRole && hasStudentRole ? "Teacher & Student" : roleLabels[role];
+  return { role, roleLabel, hasTeacherRole, hasStudentRole };
 }
 
 function getLocalDate() {
@@ -1202,13 +1074,11 @@ function toAttendanceStatus(status: string): AttendanceStatus {
   return "Excused";
 }
 
-function getDialogTitle(dialog: PortalDialog, role: Role) {
+function getDialogTitle(dialog: PortalDialog) {
   if (dialog === "event") return "Create an event";
   if (dialog === "tracker") return "Create a student tracker";
-  if (dialog === "enrollment") return "Request child enrollment";
   if (dialog === "class") return "Create a weekly class";
-  if (dialog === "course") return "Create a course";
-  return role === "parent" ? "Request child enrollment" : "Add a student";
+  return "Create a course";
 }
 
 function getCourseLabel(course: CourseItem, courses: CourseItem[]): string {
@@ -1229,11 +1099,11 @@ function AttendanceChoice({ status, selected, onChange }: Readonly<{
   return <button type="button" className={choiceClass} onClick={onChange} aria-label={status} aria-pressed={selected}>{label}</button>;
 }
 
-function Overview({ role, hasParentRole, students, familyStudentIds, classes, events, attendance, attendanceRate, attendanceAnalytics, attendanceDate, classRosterIds, selectedClassId, onClassChange, onAttendanceChange, onSaveAttendance, onNavigate, onRegister }: Readonly<{
+function Overview({ role, hasStudentRole, students, myStudentIds, classes, events, attendance, attendanceRate, attendanceAnalytics, attendanceDate, classRosterIds, selectedClassId, onClassChange, onAttendanceChange, onSaveAttendance, onNavigate, onRegister }: Readonly<{
   role: Role;
-  hasParentRole: boolean;
+  hasStudentRole: boolean;
   students: Student[];
-  familyStudentIds: string[];
+  myStudentIds: string[];
   classes: ClassItem[];
   events: CommunityEvent[];
   attendance: Record<string, AttendanceStatus>;
@@ -1249,9 +1119,9 @@ function Overview({ role, hasParentRole, students, familyStudentIds, classes, ev
   onRegister: (id: string | number) => void;
 }>) {
   const isStaff = role === "teacher";
-  const familyStudents = hasParentRole ? students.filter((student) => familyStudentIds.includes(String(student.id))) : [];
+  const myStudents = hasStudentRole ? students.filter((student) => myStudentIds.includes(String(student.id))) : [];
   const rosterStudents = students.filter((student) => classRosterIds.includes(String(student.id)));
-  const familyAttendanceTotals = familyStudents.reduce((totals, student) => {
+  const studentAttendanceTotals = myStudents.reduce((totals, student) => {
     const stats = attendanceAnalytics[String(student.id)];
     if (stats) {
       totals.present += stats.present;
@@ -1260,8 +1130,8 @@ function Overview({ role, hasParentRole, students, familyStudentIds, classes, ev
     }
     return totals;
   }, { present: 0, absent: 0, excused: 0 });
-  const familyMarkCount = familyAttendanceTotals.present + familyAttendanceTotals.absent + familyAttendanceTotals.excused;
-  const familyRate = Math.round((familyAttendanceTotals.present / Math.max(familyMarkCount, 1)) * 100);
+  const studentMarkCount = studentAttendanceTotals.present + studentAttendanceTotals.absent + studentAttendanceTotals.excused;
+  const studentRate = Math.round((studentAttendanceTotals.present / Math.max(studentMarkCount, 1)) * 100);
   const upcomingClasses = getUpcomingClassOccurrences(classes);
   const nextClass = upcomingClasses[0];
   const upcomingEventCount = events.filter((event) => event.startsAt && new Date(event.startsAt) >= new Date()).length;
@@ -1269,7 +1139,7 @@ function Overview({ role, hasParentRole, students, familyStudentIds, classes, ev
   const markedAttendanceCount = Object.keys(attendance).length;
   const metrics = isStaff
     ? [{ label: "Enrolled learners", value: String(students.length), note: "Active paathshala learners", icon: Users }, { label: "Weekly classes", value: String(classes.length), note: "Current class schedule", icon: BookOpen }, { label: "Selected class attendance", value: markedAttendanceCount ? `${attendanceRate}%` : "—", note: `${selectedClass?.name ?? "No class selected"} · ${attendanceDate}`, icon: ClipboardCheck }, { label: "Upcoming events", value: String(upcomingEventCount), note: "Published future events", icon: CalendarDays }]
-    : [{ label: "My learners", value: String(familyStudents.length), note: "Linked to this account", icon: GraduationCap }, { label: "Attendance", value: familyMarkCount ? `${familyRate}%` : "—", note: familyMarkCount ? `${familyMarkCount} saved marks` : "No attendance records", icon: ClipboardCheck }, { label: "Next class", value: nextClass ? nextClass.date.toLocaleDateString("en", { weekday: "short" }) : "—", note: nextClass ? `${nextClass.classItem.name} · ${formatStartTime(nextClass.classItem.startsAt)}` : "No upcoming class", icon: BookOpen }, { label: "Community events", value: String(upcomingEventCount), note: "Published future events", icon: CalendarDays }];
+    : [{ label: "My learning", value: String(myStudents.length), note: "Student membership", icon: GraduationCap }, { label: "Attendance", value: studentMarkCount ? `${studentRate}%` : "—", note: studentMarkCount ? `${studentMarkCount} saved marks` : "No attendance records", icon: ClipboardCheck }, { label: "Next class", value: nextClass ? nextClass.date.toLocaleDateString("en", { weekday: "short" }) : "—", note: nextClass ? `${nextClass.classItem.name} · ${formatStartTime(nextClass.classItem.startsAt)}` : "No upcoming class", icon: BookOpen }, { label: "Community events", value: String(upcomingEventCount), note: "Published future events", icon: CalendarDays }];
 
   return <>
     <div className="metrics">
@@ -1280,7 +1150,7 @@ function Overview({ role, hasParentRole, students, familyStudentIds, classes, ev
     </div>
     <div className="content-grid">
       <div>
-        {isStaff ? <AttendancePanel role={role} students={rosterStudents} rosterIds={classRosterIds} classes={classes} selectedClassId={selectedClassId} onClassChange={onClassChange} attendance={attendance} onChange={onAttendanceChange} onSave={onSaveAttendance} analytics={attendanceAnalytics} compact /> : <SchedulePanel students={familyStudents} classes={classes} />}
+        {isStaff ? <AttendancePanel role={role} students={rosterStudents} rosterIds={classRosterIds} classes={classes} selectedClassId={selectedClassId} onClassChange={onClassChange} attendance={attendance} onChange={onAttendanceChange} onSave={onSaveAttendance} analytics={attendanceAnalytics} compact /> : <SchedulePanel students={myStudents} classes={classes} />}
         <section className="panel">
           <div className="panel-header"><div><h2 className="panel-title">Coming together</h2><p className="panel-subtitle">Upcoming events at your paathshala</p></div><button className="quiet-button" onClick={() => onNavigate("events")}>All events <ArrowUpRight size={14} /></button></div>
           <div className="panel-body">
@@ -1303,7 +1173,6 @@ function Overview({ role, hasParentRole, students, familyStudentIds, classes, ev
             ? <div className="empty-state">No teachers are assigned to a class yet.</div>
             : classes.filter((classItem) => classItem.teacher !== "Teacher to be assigned").map((classItem) => <div className="teacher-card" key={classItem.id}><div className="teacher-initial">{classItem.teacher.split(" ").map((part) => part[0]).slice(0, 2).join("")}</div><div className="row-main"><p className="row-title">{classItem.teacher}</p><p className="row-detail">{classItem.name} · {classItem.time}</p></div></div>)}</div>
         </section>
-        {hasParentRole && <section className="panel" style={{ marginTop: 15 }}><div className="panel-header"><div><h2 className="panel-title">My family</h2><p className="panel-subtitle">Children linked to this account</p></div></div><div className="panel-body">{familyStudents.length === 0 ? <div className="empty-state">No children are linked to this account yet.</div> : familyStudents.map((student) => <div className="student-row" key={student.id}><div className="avatar">{student.name.split(" ").map((part) => part[0]).join("")}</div><div className="row-main"><p className="row-title">{student.name}</p><p className="row-detail">{student.level} · enrolled</p></div></div>)}</div></section>}
       </div>
     </div>
   </>;
@@ -1353,7 +1222,7 @@ function AttendancePanel({ role, students, rosterIds, classes, selectedClassId, 
   const historyRate = Math.round((historyTotals.present / Math.max(recordedMarks, 1)) * 100);
   const markedCount = visibleStudents.filter((student) => attendance[String(student.id)]).length;
   return <section className="panel">
-    <div className="panel-header"><div><h2 className="panel-title">{isStaff ? "Class attendance roster" : "Learning attendance"}</h2><p className="panel-subtitle">{isStaff ? "Mark learners and review their attendance history" : "Your learner’s participation this term"}</p></div>{isStaff && classes.length > 1 && <select className="role-select" aria-label="Attendance class" value={selectedClassId ?? ""} onChange={(event) => onClassChange(event.target.value)}>{classes.map((classItem) => <option value={classItem.id} key={classItem.id}>{classItem.name}</option>)}</select>}</div>
+    <div className="panel-header"><div><h2 className="panel-title">{isStaff ? "Class attendance roster" : "Learning attendance"}</h2><p className="panel-subtitle">{isStaff ? "Mark students and review their attendance history" : "Your attendance history this term"}</p></div>{isStaff && classes.length > 1 && <select className="role-select" aria-label="Attendance class" value={selectedClassId ?? ""} onChange={(event) => onClassChange(event.target.value)}>{classes.map((classItem) => <option value={classItem.id} key={classItem.id}>{classItem.name}</option>)}</select>}</div>
     {isStaff && !compact && <>
       <div className="attendance-toolbar"><label className="form-label">Session date<input className="form-control" aria-label="Attendance session date" type="date" value={date} max={getLocalDate()} onChange={(event) => onDateChange(event.target.value)} /></label></div>
       <div className="attendance-summary">
@@ -1365,14 +1234,13 @@ function AttendancePanel({ role, students, rosterIds, classes, selectedClassId, 
     </>}
     <div className="panel-body">
       {!isStaff && <div className="attendance-bar"><div className="attendance-percent">{recordedMarks ? `${historyRate}%` : "—"}</div><div className="bar-track"><div className="bar-fill" style={{ width: `${historyRate}%` }} /></div><span className="row-detail">{recordedMarks ? `${recordedMarks} saved marks` : "No attendance records"}</span></div>}
-      {isStaff ? <div className="roster-table-wrap"><table className="roster-table"><thead><tr><th>Learner</th>{!compact && <th>Family</th>}<th>Mark</th>{!compact && <th>History</th>}</tr></thead><tbody>
+      {isStaff ? <div className="roster-table-wrap"><table className="roster-table"><thead><tr><th>Student</th><th>Mark</th>{!compact && <th>History</th>}</tr></thead><tbody>
         {visibleStudents.slice(0, compact ? 3 : undefined).map((student) => {
           const stats = analytics[String(student.id)];
           const total = stats ? stats.present + stats.absent + stats.excused : 0;
           const rate = total ? Math.round((stats.present / total) * 100) : null;
           return <tr key={student.id}>
             <td><strong>{student.name}</strong><div className="row-detail">{student.level}</div></td>
-            {!compact && <td>{student.parent || "—"}</td>}
             <td><div className="attendance-choice">{(["Present", "Absent", "Excused"] as AttendanceStatus[]).map((status) => <AttendanceChoice key={status} status={status} selected={attendance[String(student.id)] === status} onChange={() => onChange(student.id, status)} />)}</div></td>
             {!compact && <td><strong>{rate === null ? "No history" : `${rate}% · ${total} sessions`}</strong><div className="row-detail">{stats ? `${stats.present} present · ${stats.absent} absent · ${stats.excused} excused` : "No recorded marks"}</div></td>}
           </tr>;
@@ -1388,47 +1256,29 @@ function AttendancePanel({ role, students, rosterIds, classes, selectedClassId, 
   </section>;
 }
 
-function StudentsPanel({ role, hasParentRole, students, classes, familyStudentIds, familyRequests, teacherRequests, joinRequests, onApprove, onApproveTeacher, onEnroll }: Readonly<{
+function StudentsPanel({ role, students, classes, studentRequests, teacherRequests, onApproveStudent, onApproveTeacher, onEnroll }: Readonly<{
   role: Role;
-  hasParentRole: boolean;
   students: Student[];
   classes: ClassItem[];
-  familyStudentIds: string[];
-  familyRequests: EnrollmentRequest[];
+  studentRequests: StudentAccessRequest[];
   teacherRequests: TeacherRequest[];
-  joinRequests: EnrollmentRequest[];
-  onApprove: (id: string) => void;
+  onApproveStudent: (id: string) => void;
   onApproveTeacher: (id: string) => void;
   onEnroll: (studentId: string | number, classId: string) => void;
 }>) {
-  const visibleStudents = role === "parent" ? students.filter((student) => familyStudentIds.includes(String(student.id))) : students;
   return <div className="content-grid">
-    <section className="panel"><div className="panel-header"><div><h2 className="panel-title">{role === "parent" ? "Family learners" : "Active learners"}</h2><p className="panel-subtitle">{visibleStudents.length} learners in this view</p></div></div>
-      <div className="panel-body">{visibleStudents.length === 0 ? <div className="empty-state">No learners are linked to this account yet.</div> : visibleStudents.map((student) => <div className="student-row" key={student.id}><div className="avatar">{student.name.split(" ").map((part) => part[0]).join("")}</div><div className="row-main"><p className="row-title">{student.name}</p><p className="row-detail">{student.level}{student.parent ? ` · ${student.parent}` : ""}</p></div>{role === "teacher" ? <StudentEnrollmentControl studentId={student.id} classes={classes} onEnroll={onEnroll} /> : <span className="pill">Active</span>}</div>)}</div>
+    <section className="panel"><div className="panel-header"><div><h2 className="panel-title">{role === "teacher" ? "Active students" : "My student profile"}</h2><p className="panel-subtitle">{students.length} {students.length === 1 ? "student" : "students"} in this view</p></div></div>
+      <div className="panel-body">{students.length === 0 ? <div className="empty-state">No active student membership is linked to this account yet.</div> : students.map((student) => <div className="student-row" key={student.id}><div className="avatar">{student.name.split(" ").map((part) => part[0]).join("")}</div><div className="row-main"><p className="row-title">{student.name}</p><p className="row-detail">{student.level}</p></div>{role === "teacher" ? <StudentEnrollmentControl studentId={student.id} classes={classes} onEnroll={onEnroll} /> : <span className="pill">Active</span>}</div>)}</div>
     </section>
-    {role === "teacher" ? <div>
-      <section className="panel"><div className="panel-header"><div><h2 className="panel-title">Child enrollment requests</h2><p className="panel-subtitle">Each child is reviewed separately</p></div><span className="pill warm">{joinRequests.filter((request) => request.status === "pending").length} pending</span></div>
-        <div className="panel-body">{joinRequests.filter((request) => request.status === "pending").length === 0 ? <div className="empty-state">No pending enrollment requests.</div> : joinRequests.filter((request) => request.status === "pending").map((request) => <div className="student-row" key={request.id}><div className="row-main"><p className="row-title">{request.learnerName}</p><p className="row-detail">{request.level || "Level not specified"} · {request.parentName}</p></div><button type="button" className="secondary-button" onClick={() => onApprove(request.id)}><Check size={13} /> Approve</button></div>)}</div>
+    {role === "teacher" && <div>
+      <section className="panel"><div className="panel-header"><div><h2 className="panel-title">Student access requests</h2><p className="panel-subtitle">Approve students joining this paathshala</p></div><span className="pill warm">{studentRequests.length} pending</span></div>
+        <div className="panel-body">{studentRequests.length === 0 ? <div className="empty-state">No pending Student requests.</div> : studentRequests.map((request) => <div className="student-row" key={request.id}><div className="row-main"><p className="row-title">{request.name}</p><p className="row-detail">Requested {new Date(request.createdAt).toLocaleDateString()}</p></div><button type="button" className="secondary-button" onClick={() => onApproveStudent(request.id)}><Check size={13} /> Approve student</button></div>)}</div>
       </section>
       <section className="panel"><div className="panel-header"><div><h2 className="panel-title">Teacher access requests</h2><p className="panel-subtitle">Approve teachers joining this paathshala</p></div><span className="pill warm">{teacherRequests.length} pending</span></div>
         <div className="panel-body">{teacherRequests.length === 0 ? <div className="empty-state">No pending teacher requests.</div> : teacherRequests.map((request) => <div className="student-row" key={request.id}><div className="row-main"><p className="row-title">{request.name}</p><p className="row-detail">Requested {new Date(request.createdAt).toLocaleDateString()}</p></div><button type="button" className="secondary-button" onClick={() => onApproveTeacher(request.id)}><Check size={13} /> Approve teacher</button></div>)}</div>
       </section>
-      {hasParentRole && <FamilyLearnersPanel students={students.filter((student) => familyStudentIds.includes(String(student.id)))} />}
-      {(hasParentRole || familyRequests.length > 0) && <EnrollmentHistory requests={familyRequests} />}
-    </div> : <EnrollmentHistory requests={familyRequests} />}
+    </div>}
   </div>;
-}
-
-function FamilyLearnersPanel({ students }: Readonly<{ students: Student[] }>) {
-  return <section className="panel"><div className="panel-header"><div><h2 className="panel-title">My family</h2><p className="panel-subtitle">Children linked to this account</p></div></div>
-    <div className="panel-body">{students.length === 0 ? <div className="empty-state">No children are linked to this account yet.</div> : students.map((student) => <div className="student-row" key={student.id}><div className="avatar">{student.name.split(" ").map((part) => part[0]).join("")}</div><div className="row-main"><p className="row-title">{student.name}</p><p className="row-detail">{student.level} · enrolled</p></div></div>)}</div>
-  </section>;
-}
-
-function EnrollmentHistory({ requests }: Readonly<{ requests: EnrollmentRequest[] }>) {
-  return <section className="panel"><div className="panel-header"><div><h2 className="panel-title">My child enrollment requests</h2><p className="panel-subtitle">Each child follows their own review</p></div></div>
-    <div className="panel-body">{requests.length === 0 ? <div className="empty-state">No enrollment requests yet. Request a place for each child separately.</div> : requests.map((request) => <div className="student-row" key={request.id}><div className="row-main"><p className="row-title">{request.learnerName}</p><p className="row-detail">{request.level || "Level not specified"} · Requested {new Date(request.createdAt).toLocaleDateString()}</p></div><span className={`pill ${request.status === "approved" ? "" : "warm"}`}>{request.status}</span></div>)}</div>
-  </section>;
 }
 
 function StudentEnrollmentControl({ studentId, classes, onEnroll }: Readonly<{
@@ -1576,7 +1426,7 @@ function StudentTrackersPanel({ role, trackers, students, classes, onToggle }: R
           const studentId = String(student.id);
           const isMarked = tracker.markedStudentIds.includes(studentId);
           return <div className="tracker-student-row" key={studentId}>
-            <div className="row-main"><p className="row-title">{student.name}</p><p className="row-detail">{student.level}{canManage && student.parent ? ` · ${student.parent}` : ""}</p></div>
+            <div className="row-main"><p className="row-title">{student.name}</p><p className="row-detail">{student.level}</p></div>
             {canManage
               ? <label className="tracker-toggle"><input type="checkbox" aria-label={`${tracker.title} status for ${student.name}`} checked={isMarked} onChange={(event) => onToggle(tracker.id, studentId, event.target.checked)} /><span>{isMarked ? "Marked" : "Not marked"}</span></label>
               : <span className={`pill ${isMarked ? "" : "warm"}`}>{isMarked ? "Marked" : "Not marked"}</span>}

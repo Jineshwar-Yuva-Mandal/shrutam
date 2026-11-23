@@ -66,16 +66,15 @@ async function getLoginDestination(supabase: NonNullable<ReturnType<typeof creat
   const { data: platformAdmin } = await supabase.from("platform_admins").select("user_id").eq("user_id", userId).maybeSingle();
   if (platformAdmin) return "/platform";
 
-  const { data: memberships } = await supabase.from("paathshala_memberships").select("paathshala_id, status").eq("user_id", userId);
-  const activeTenantIds = [...new Set((memberships ?? []).filter((membership) => membership.status === "active").map((membership) => membership.paathshala_id))];
-  const hasPendingTeacherRequest = (memberships ?? []).some((membership) => membership.status === "pending");
-  const { data: pendingFamilyRequests } = await supabase.from("family_join_requests").select("id").eq("requester_user_id", userId).eq("status", "pending").limit(1);
-  const hasPendingFamilyRequest = (pendingFamilyRequests ?? []).length > 0;
+  const { data: memberships } = await supabase.from("paathshala_memberships").select("paathshala_id, role, status").eq("user_id", userId);
+  const activeMemberships = (memberships ?? []).filter((membership) => membership.status === "active");
+  const activeTenantIds = [...new Set(activeMemberships.map((membership) => membership.paathshala_id))];
+  const hasPendingMembershipRequest = (memberships ?? []).some((membership) => membership.status === "pending");
   if (activeTenantIds.length === 0) {
-    if (hasPendingTeacherRequest || hasPendingFamilyRequest) return "/spaces";
+    if (hasPendingMembershipRequest) return "/spaces";
     const initialTenant = userMetadata.initial_join_tenant;
     if (typeof initialTenant === "string" && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(initialTenant)) {
-      const role = userMetadata.initial_join_role === "teacher" ? "teacher" : "parent";
+      const role = userMetadata.initial_join_role === "teacher" ? "teacher" : "student";
       return `/join/${encodeURIComponent(initialTenant)}?role=${role}`;
     }
     return "/spaces";
@@ -83,7 +82,9 @@ async function getLoginDestination(supabase: NonNullable<ReturnType<typeof creat
 
   const { data: tenants } = await supabase.from("paathshalas").select("slug").in("id", activeTenantIds).eq("is_active", true);
   if (!tenants?.length) return "/spaces";
-  if (tenants.length === 1 && !hasPendingTeacherRequest && !hasPendingFamilyRequest) return `/${tenants[0].slug}`;
+  if (activeMemberships.length === 1 && tenants.length === 1 && !hasPendingMembershipRequest) {
+    return `/${tenants[0].slug}?role=${activeMemberships[0].role}`;
+  }
   return "/spaces";
 }
 

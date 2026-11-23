@@ -29,13 +29,13 @@ alter table public.courses enable row level security;
 alter table public.class_courses enable row level security;
 
 create policy "members read tenant courses" on public.courses
-  for select using (public.has_paathshala_role(paathshala_id, array['teacher', 'parent']::public.paathshala_role[]));
+  for select using (public.has_paathshala_role(paathshala_id, array['teacher', 'student']::public.paathshala_role[]));
 create policy "teachers manage tenant courses" on public.courses
   for all using (public.has_paathshala_role(paathshala_id, array['teacher']::public.paathshala_role[]))
   with check (public.has_paathshala_role(paathshala_id, array['teacher']::public.paathshala_role[]));
 
 create policy "members read class courses" on public.class_courses
-  for select using (public.has_paathshala_role(paathshala_id, array['teacher', 'parent']::public.paathshala_role[]));
+  for select using (public.can_view_class(class_id));
 create policy "teachers manage class courses" on public.class_courses
   for all using (public.has_paathshala_role(paathshala_id, array['teacher']::public.paathshala_role[]))
   with check (public.has_paathshala_role(paathshala_id, array['teacher']::public.paathshala_role[]));

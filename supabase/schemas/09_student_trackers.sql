@@ -39,18 +39,26 @@ alter table public.student_tracker_classes enable row level security;
 alter table public.student_tracker_records enable row level security;
 
 create policy "members read student trackers" on public.student_trackers
-  for select using (public.has_paathshala_role(paathshala_id, array['teacher', 'parent']::public.paathshala_role[]));
+  for select using (
+    public.has_paathshala_role(paathshala_id, array['teacher']::public.paathshala_role[])
+    or exists (
+      select 1
+      from public.student_tracker_classes tc
+      where tc.tracker_id = id
+        and public.can_view_class(tc.class_id)
+    )
+  );
 create policy "teachers manage student trackers" on public.student_trackers
   for all using (public.has_paathshala_role(paathshala_id, array['teacher']::public.paathshala_role[]))
   with check (public.has_paathshala_role(paathshala_id, array['teacher']::public.paathshala_role[]));
 
 create policy "members read tracker classes" on public.student_tracker_classes
-  for select using (public.has_paathshala_role(paathshala_id, array['teacher', 'parent']::public.paathshala_role[]));
+  for select using (public.can_view_class(class_id));
 create policy "teachers manage tracker classes" on public.student_tracker_classes
   for all using (public.has_paathshala_role(paathshala_id, array['teacher']::public.paathshala_role[]))
   with check (public.has_paathshala_role(paathshala_id, array['teacher']::public.paathshala_role[]));
 
-create policy "families and teachers read tracker records" on public.student_tracker_records
+create policy "students and teachers read tracker records" on public.student_tracker_records
   for select using (
     public.has_paathshala_role(paathshala_id, array['teacher']::public.paathshala_role[])
     or public.can_view_student(student_id)

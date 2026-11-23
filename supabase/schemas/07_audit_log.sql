@@ -73,8 +73,6 @@ create trigger audit_platform_admins after insert or update or delete on public.
 create trigger audit_profiles after insert or update or delete on public.profiles for each row execute function public.write_audit_log();
 create trigger audit_paathshala_memberships after insert or update or delete on public.paathshala_memberships for each row execute function public.write_audit_log();
 create trigger audit_students after insert or update or delete on public.students for each row execute function public.write_audit_log();
-create trigger audit_parent_student_links after insert or update or delete on public.parent_student_links for each row execute function public.write_audit_log();
-create trigger audit_family_join_requests after insert or update or delete on public.family_join_requests for each row execute function public.write_audit_log();
 create trigger audit_classes after insert or update or delete on public.classes for each row execute function public.write_audit_log();
 create trigger audit_class_enrollments after insert or update or delete on public.class_enrollments for each row execute function public.write_audit_log();
 create trigger audit_attendance_sessions after insert or update or delete on public.attendance_sessions for each row execute function public.write_audit_log();

@@ -34,8 +34,8 @@ as $$
       and viewer.status = 'active'
       and teacher.user_id = p_contact_user_id
       and (
-        (viewer.role = 'teacher' and teacher.role in ('teacher', 'parent') and teacher.status in ('pending', 'active'))
-        or (viewer.role = 'parent' and teacher.role = 'teacher' and teacher.status = 'active')
+        (viewer.role = 'teacher' and teacher.role in ('teacher', 'student') and teacher.status in ('pending', 'active'))
+        or (viewer.role = 'student' and teacher.role = 'teacher' and teacher.status = 'active')
       )
   );
 $$;
@@ -50,10 +50,7 @@ as $$
     from public.students s
     where s.id = p_student_id
       and (
-        exists (
-          select 1 from public.parent_student_links p
-          where p.student_id = s.id and p.parent_user_id = auth.uid()
-        )
+        s.user_id = auth.uid()
         or public.has_paathshala_role(s.paathshala_id, array['teacher']::public.paathshala_role[])
       )
   );
@@ -68,6 +65,29 @@ as $$
     select 1 from public.classes c
     where c.id = p_class_id
       and public.has_paathshala_role(c.paathshala_id, array['teacher']::public.paathshala_role[])
+  );
+$$;
+
+create function public.can_view_class(p_class_id uuid)
+returns boolean
+language sql stable security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.classes c
+    where c.id = p_class_id
+      and (
+        public.has_paathshala_role(c.paathshala_id, array['teacher']::public.paathshala_role[])
+        or exists (
+          select 1
+          from public.class_enrollments e
+          join public.students s on s.id = e.student_id
+          where e.class_id = c.id
+            and s.user_id = auth.uid()
+            and s.is_active
+        )
+      )
   );
 $$;
 
@@ -148,46 +168,6 @@ begin
 end;
 $$;
 
-create function public.approve_family_join_request(p_request_id uuid)
-returns uuid
-language plpgsql security definer
-set search_path = public
-as $$
-declare
-  join_request public.family_join_requests%rowtype;
-  new_student_id uuid;
-begin
-  select * into join_request
-  from public.family_join_requests
-  where id = p_request_id
-  for update;
-
-  if not found or not public.has_paathshala_role(join_request.paathshala_id, array['teacher']::public.paathshala_role[]) then
-    raise exception 'Join request not found or not authorized';
-  end if;
-  if join_request.status <> 'pending' then
-    raise exception 'Join request has already been reviewed';
-  end if;
-
-  insert into public.students (paathshala_id, full_name, learning_level)
-  values (join_request.paathshala_id, join_request.learner_name, join_request.requested_level)
-  returning id into new_student_id;
-
-  insert into public.parent_student_links (paathshala_id, parent_user_id, student_id)
-  values (join_request.paathshala_id, join_request.requester_user_id, new_student_id);
-
-  insert into public.paathshala_memberships (paathshala_id, user_id, role, status)
-  values (join_request.paathshala_id, join_request.requester_user_id, 'parent', 'active')
-  on conflict (paathshala_id, user_id, role) do update set status = 'active';
-
-  update public.family_join_requests
-  set status = 'approved', student_id = new_student_id, reviewed_by = auth.uid(), reviewed_at = now()
-  where id = p_request_id;
-
-  return new_student_id;
-end;
-$$;
-
 create function public.approve_teacher_membership(p_membership_id uuid)
 returns void
 language plpgsql security definer
@@ -210,5 +190,43 @@ begin
   update public.paathshala_memberships
   set status = 'active'
   where id = p_membership_id;
+end;
+$$;
+
+create function public.approve_student_membership(p_membership_id uuid)
+returns uuid
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  requested_membership public.paathshala_memberships%rowtype;
+  student_name text;
+  new_student_id uuid;
+begin
+  select * into requested_membership
+  from public.paathshala_memberships
+  where id = p_membership_id
+  for update;
+
+  if not found or requested_membership.role <> 'student' or requested_membership.status <> 'pending'
+    or not public.is_platform_admin()
+      and not public.has_paathshala_role(requested_membership.paathshala_id, array['teacher']::public.paathshala_role[]) then
+    raise exception 'Student request not found or not authorized';
+  end if;
+
+  select coalesce(nullif(p.full_name, ''), 'Student') into student_name
+  from public.profiles p where p.user_id = requested_membership.user_id;
+  student_name := coalesce(student_name, 'Student');
+
+  update public.paathshala_memberships
+  set status = 'active'
+  where id = p_membership_id;
+
+  insert into public.students (paathshala_id, user_id, full_name)
+  values (requested_membership.paathshala_id, requested_membership.user_id, student_name)
+  on conflict (paathshala_id, user_id) do update set is_active = true
+  returning id into new_student_id;
+
+  return new_student_id;
 end;
 $$;
