@@ -31,7 +31,7 @@ export default async function HomePage() {
       <div className="landing-hero-inner">
         <div className="landing-hero-copy">
           <p className="landing-kicker">A JYM-Digital initiative · Rajajinagar</p>
-          <h1 id="landing-title">Shrutam</h1>
+          <h1 id="landing-title"><BrandLogo variant="text" className="landing-hero-logo" alt="Shrutam" priority /></h1>
           <p className="landing-hero-heading">A shared home for paathshala learning.</p>
           <p className="landing-hero-description">Bring students, teachers, classes, courses, and attendance together in one welcoming space, shaped around the way our community learns.</p>
           <div className="landing-hero-actions">
@@ -40,11 +40,8 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="landing-hero-panel" aria-label="Learning in community">
-          <div className="landing-panel-top"><span>JINESHWAR YUVA MANDAL</span><span>01 — 03</span></div>
-          <p className="landing-panel-label">Learning in community</p>
-          <p className="landing-panel-statement">Dharma.<br />Seva.<br /><span>Learning.</span></p>
-          <div className="landing-panel-bottom"><span>Preserving values</span><span>Connecting communities</span></div>
+        <div className="landing-emblem-stage" aria-hidden="true">
+          <BrandLogo variant="icon" className="landing-emblem" alt="" priority />
         </div>
       </div>
     </section>
