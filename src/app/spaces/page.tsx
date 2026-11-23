@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, School } from "lucide-react";
 import BrandLogo from "@/components/brand-logo";
+import PaathshalaCodeForm from "@/components/paathshala-code-form";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type Space = { slug: string; name: string; city: string; roles: string[] };
@@ -83,7 +84,7 @@ function SpacesList({ spaces, pendingRequests }: Readonly<{ spaces: Space[]; pen
         <span className="tenant-space-meta"><span className="pill">{space.roles.map((role) => role === "teacher" ? "Teacher" : "Parent").join(" + ")}</span><ArrowRight size={16} /></span>
       </Link>)}
       {pendingRequests.length > 0 && <section className="panel"><div className="panel-header"><div><h2 className="panel-title">Requests awaiting review</h2><p className="panel-subtitle">Your access and enrollment requests</p></div></div><div className="panel-body">{pendingRequests.map((request) => <div className="student-row" key={request.id}><div className="row-main"><p className="row-title">{request.tenantName}</p><p className="row-detail">{request.description}</p></div><span className="pill warm">Pending</span></div>)}</div></section>}
-      {spaces.length === 0 && pendingRequests.length === 0 && <section className="panel"><div className="empty-state">No active paathshala memberships yet.</div><div className="panel-body"><Link className="primary-button" href="/signup">Join a paathshala</Link></div></section>}
+      {spaces.length === 0 && pendingRequests.length === 0 && <section className="panel"><div className="panel-header"><div><h2 className="panel-title">Join a paathshala</h2><p className="panel-subtitle">Enter the code shared by your paathshala.</p></div></div><div className="panel-body"><PaathshalaCodeForm /></div></section>}
       </div>
     </div>
   </main>;

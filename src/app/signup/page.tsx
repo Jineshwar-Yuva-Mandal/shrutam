@@ -37,7 +37,7 @@ function SignupForm() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName, initial_join_role: accountType }, emailRedirectTo: callback },
+      options: { data: { full_name: fullName, initial_join_role: accountType, initial_join_tenant: tenantSlug }, emailRedirectTo: callback },
     });
     setBusy(false);
 

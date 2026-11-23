@@ -36,7 +36,7 @@ function LoginForm() {
       return;
     }
 
-    const destination = await getLoginDestination(supabase, data.user.id, searchParams.get("next"));
+    const destination = await getLoginDestination(supabase, data.user.id, searchParams.get("next"), data.user.user_metadata);
     router.replace(destination);
     router.refresh();
   }
@@ -60,7 +60,7 @@ function LoginForm() {
   </AuthFrame>;
 }
 
-async function getLoginDestination(supabase: NonNullable<ReturnType<typeof createSupabaseBrowserClient>>, userId: string, requestedNext: string | null) {
+async function getLoginDestination(supabase: NonNullable<ReturnType<typeof createSupabaseBrowserClient>>, userId: string, requestedNext: string | null, userMetadata: Record<string, unknown>) {
   if (requestedNext?.startsWith("/") && !requestedNext.startsWith("//")) return requestedNext;
 
   const { data: platformAdmin } = await supabase.from("platform_admins").select("user_id").eq("user_id", userId).maybeSingle();
@@ -71,7 +71,15 @@ async function getLoginDestination(supabase: NonNullable<ReturnType<typeof creat
   const hasPendingTeacherRequest = (memberships ?? []).some((membership) => membership.status === "pending");
   const { data: pendingFamilyRequests } = await supabase.from("family_join_requests").select("id").eq("requester_user_id", userId).eq("status", "pending").limit(1);
   const hasPendingFamilyRequest = (pendingFamilyRequests ?? []).length > 0;
-  if (activeTenantIds.length === 0) return hasPendingTeacherRequest || hasPendingFamilyRequest ? "/spaces" : "/signup";
+  if (activeTenantIds.length === 0) {
+    if (hasPendingTeacherRequest || hasPendingFamilyRequest) return "/spaces";
+    const initialTenant = userMetadata.initial_join_tenant;
+    if (typeof initialTenant === "string" && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(initialTenant)) {
+      const role = userMetadata.initial_join_role === "teacher" ? "teacher" : "parent";
+      return `/join/${encodeURIComponent(initialTenant)}?role=${role}`;
+    }
+    return "/spaces";
+  }
 
   const { data: tenants } = await supabase.from("paathshalas").select("slug").in("id", activeTenantIds).eq("is_active", true);
   if (!tenants?.length) return "/signup";

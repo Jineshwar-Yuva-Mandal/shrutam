@@ -252,6 +252,7 @@ h1 { margin-bottom: 7px; font-family: var(--font-display); font-size: 31px; font
 .spaces-brand-link { display: inline-flex; align-items: center; }
 .spaces-brand-logo { display: block; width: 210px; height: auto; }
 .spaces-content { display: flex; flex-direction: column; justify-content: center; width: min(980px, calc(100% - 40px)); min-height: calc(100svh - 68px); margin: 0 auto; padding: clamp(36px, 7vh, 76px) 0; }
+.join-space-form { display: grid; grid-template-columns: minmax(0, 1fr) 180px auto; align-items: end; gap: 10px; }
 .spaces-intro { max-width: 650px; margin: 0 auto 32px; text-align: center; }
 .spaces-intro::before { display: block; width: 44px; height: 3px; margin: 0 auto 18px; background: linear-gradient(90deg, var(--burgundy) 0 72%, var(--gold) 72%); content: ""; }
 .spaces-intro h1 { margin-bottom: 10px; font-size: 34px; }
@@ -323,6 +324,8 @@ h1 { margin-bottom: 7px; font-family: var(--font-display); font-size: 31px; font
   .platform-user { align-items: flex-end; flex-direction: column; gap: 6px; }
   .platform-content { padding: 26px 16px 40px; }
   .spaces-content { min-height: calc(100svh - 68px); padding: 38px 0; }
+  .join-space-form { grid-template-columns: 1fr; }
+  .join-space-form .primary-button { width: 100%; }
   .spaces-intro { margin-bottom: 24px; }
   .spaces-intro h1 { font-size: 28px; }
   .spaces-grid { grid-template-columns: 1fr; gap: 11px; }
