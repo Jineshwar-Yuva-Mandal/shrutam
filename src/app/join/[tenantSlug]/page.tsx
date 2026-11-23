@@ -14,9 +14,13 @@ export default function JoinPaathshalaPage() {
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [tenantName, setTenantName] = useState(tenantSlug);
   const [joinRole, setJoinRole] = useState<"student" | "teacher">(requestedRole);
-  const [membershipRequestPending, setMembershipRequestPending] = useState(false);
+  const [membershipLookup, setMembershipLookup] = useState<{ key: string; status: string | null } | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const membershipLookupKey = `${tenantSlug}:${requestedRole}`;
+  const membershipCheckComplete = membershipLookup?.key === membershipLookupKey;
+  const existingMembershipStatus = membershipCheckComplete ? membershipLookup?.status ?? null : null;
+  const membershipRequestPending = existingMembershipStatus === "pending";
 
   useEffect(() => {
     let active = true;
@@ -41,22 +45,27 @@ export default function JoinPaathshalaPage() {
       }
       setTenantId(data.id);
       setTenantName(data.name);
-      const { data: request } = await supabase.from("paathshala_memberships")
+      const { data: request, error: membershipError } = await supabase.from("paathshala_memberships")
         .select("id, status")
         .eq("paathshala_id", data.id)
         .eq("user_id", user.id)
         .eq("role", requestedRole)
         .in("status", ["pending", "active"])
         .maybeSingle();
-      if (active && request) {
-        setMembershipRequestPending(true);
+      if (!active) return;
+      if (membershipError) {
+        setMessage("Could not check your existing access. Reload the page before requesting membership.");
+        return;
+      }
+      setMembershipLookup({ key: membershipLookupKey, status: request?.status ?? null });
+      if (request) {
         const roleName = requestedRole === "teacher" ? "Teacher" : "Student";
         setMessage(request.status === "active" ? `You already have ${roleName.toLowerCase()} access to this paathshala.` : `Your ${roleName.toLowerCase()} access request is waiting for approval.`);
       }
     }
     void loadTenant();
     return () => { active = false; };
-  }, [requestedRole, router, tenantSlug]);
+  }, [membershipLookupKey, requestedRole, router, tenantSlug]);
 
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -77,10 +86,17 @@ export default function JoinPaathshalaPage() {
     });
     setBusy(false);
     if (error) {
+      if (error.code === "23505") {
+        setMembershipLookup({ key: membershipLookupKey, status: "pending" });
+        setMessage(`A ${roleName} request or membership already exists for this paathshala.`);
+        router.replace("/spaces");
+        router.refresh();
+        return;
+      }
       setMessage(error.message);
       return;
     }
-    setMembershipRequestPending(true);
+    setMembershipLookup({ key: membershipLookupKey, status: "pending" });
     router.replace("/spaces");
     router.refresh();
   }
@@ -88,12 +104,13 @@ export default function JoinPaathshalaPage() {
   const roleName = joinRole === "teacher" ? "teacher" : "student";
   let submitLabel = `Request ${roleName} access`;
   if (membershipRequestPending) submitLabel = "Request pending approval";
+  if (existingMembershipStatus === "active") submitLabel = "Membership active";
   if (busy) submitLabel = "Sending request...";
 
   return <main className="auth-screen"><div className="auth-aside"><BrandLogo variant="complete" className="auth-aside-logo" priority /><p className="auth-verse">Learning begins<br />with belonging.</p><div className="auth-aside-bottom">{joinRole === "teacher" ? "Teacher access is approved by an active teacher." : "Student access is approved by a teacher."}</div></div><section className="auth-content"><div className="auth-panel"><p className="eyebrow">{joinRole === "teacher" ? "Teacher access" : "Student access"}</p><h1>Join {tenantName}</h1><p className="heading-note">Request {roleName} access to this paathshala.</p><div className="join-signout-row"><SignOutButton /></div>
     <form className="auth-form" onSubmit={submit}>
       {message && <output className="auth-message">{message}</output>}
-      <button type="submit" className="primary-button auth-submit" disabled={!tenantId || busy || membershipRequestPending}>{submitLabel}</button>
+      <button type="submit" className="primary-button auth-submit" disabled={!tenantId || !membershipCheckComplete || busy || existingMembershipStatus !== null}>{submitLabel}</button>
     </form>
   </div></section></main>;
 }

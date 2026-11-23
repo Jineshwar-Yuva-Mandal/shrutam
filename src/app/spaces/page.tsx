@@ -7,7 +7,7 @@ import SignOutButton from "@/components/sign-out-button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type Space = { slug: string; name: string; city: string; role: "teacher" | "student" };
-type PendingSpaceRequest = { id: string; tenantName: string; description: string };
+type PendingSpaceRequest = { id: string; tenantName: string; role: "Teacher" | "Student"; description: string };
 
 export default async function SpacesPage() {
   const supabase = await createSupabaseServerClient();
@@ -49,7 +49,8 @@ export default async function SpacesPage() {
     ...pendingMemberships.map((request) => ({
       id: request.id,
       tenantName: (tenants ?? []).find((tenant) => tenant.id === request.paathshala_id)?.name ?? "Paathshala",
-      description: request.role === "teacher" ? "Teacher access is waiting for approval." : "Student access is waiting for approval.",
+      role: request.role === "teacher" ? "Teacher" as const : "Student" as const,
+      description: "This request is waiting for paathshala approval.",
     })),
   ];
   if (activeSpaces.length === 1 && pendingRequests.length === 0) redirect(`/${activeSpaces[0].slug}?role=${activeSpaces[0].role}`);
@@ -76,7 +77,7 @@ function SpacesList({ spaces, pendingRequests }: Readonly<{ spaces: Space[]; pen
         <div className="row-main"><p className="row-title">{space.name}</p><p className="row-detail">{space.city || "City not set"}</p></div>
         <span className="tenant-space-meta"><span className="pill">{space.role === "teacher" ? "Teacher view" : "Student view"}</span><ArrowRight size={16} /></span>
       </Link>)}
-      {pendingRequests.length > 0 && <section className="panel"><div className="panel-header"><div><h2 className="panel-title">Requests awaiting review</h2><p className="panel-subtitle">Your access and enrollment requests</p></div></div><div className="panel-body">{pendingRequests.map((request) => <div className="student-row" key={request.id}><div className="row-main"><p className="row-title">{request.tenantName}</p><p className="row-detail">{request.description}</p></div><span className="pill warm">Pending</span></div>)}</div></section>}
+      {pendingRequests.length > 0 && <section className="panel"><div className="panel-header"><div><h2 className="panel-title">Requests awaiting review</h2><p className="panel-subtitle">A pending request already exists for these paathshala roles.</p></div></div><div className="panel-body">{pendingRequests.map((request) => <div className="student-row" key={request.id}><div className="row-main"><p className="row-title">{request.tenantName}</p><p className="row-detail">{request.role} access · {request.description}</p></div><span className="pill warm">Pending approval</span></div>)}</div></section>}
       <section className="panel"><div className="panel-header"><div><h2 className="panel-title">{spaces.length === 0 ? "Join a paathshala" : "Add another paathshala"}</h2><p className="panel-subtitle">Enter the code shared by your paathshala.</p></div></div><div className="panel-body"><PaathshalaCodeForm /></div></section>
       </div>
     </div>
