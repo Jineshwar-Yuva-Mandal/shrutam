@@ -80,7 +80,7 @@ export default async function HomePage() {
           <Image src="/jineshwar-yuva-mandal-logo.png" alt="Jineshwar Yuva Mandal, Rajajinagar" width={512} height={512} unoptimized />
         </div>
       </div>
-      <div className="landing-motto"><span>जहाँ सेवा, वहाँ समर्पण।<br />जहाँ युवा, वहाँ परिवर्तन।</span><span>Where there is service, there is dedication. Where there is youth, there is change.</span></div>
+      <div className="landing-motto"><strong>जहाँ सेवा, वहाँ समर्पण। जहाँ युवा, वहाँ परिवर्तन।</strong></div>
     </section>
 
     <section className="landing-cta" aria-labelledby="landing-cta-title">
