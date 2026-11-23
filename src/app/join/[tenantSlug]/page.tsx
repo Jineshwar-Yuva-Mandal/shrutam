@@ -77,8 +77,12 @@ export default function JoinPaathshalaPage() {
         status: "pending",
       });
       setBusy(false);
-      setMessage(error ? error.message : "Teacher access requested. An active paathshala teacher must approve it before you can access records.");
-      if (!error) setTeacherRequestPending(true);
+      if (error) {
+        setMessage(error.message);
+        return;
+      }
+      router.replace("/spaces");
+      router.refresh();
       return;
     }
     const formData = new FormData(event.currentTarget);
@@ -92,7 +96,12 @@ export default function JoinPaathshalaPage() {
       requested_level: typeof levelValue === "string" ? levelValue.trim() : "",
     });
     setBusy(false);
-    setMessage(error ? error.message : "Request sent. The paathshala team will review it and add the learner to a class.");
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    router.replace("/spaces");
+    router.refresh();
   }
 
   let submitLabel = "Request child enrollment";
