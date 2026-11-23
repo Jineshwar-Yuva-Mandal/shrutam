@@ -341,17 +341,11 @@ h1 { margin-bottom: 7px; font-family: var(--font-display); font-size: 31px; font
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
 
-.landing-page { --landing-green: #315b4c; background: #fbfaf7; color: var(--ink); }
-.landing-header { position: relative; z-index: 2; border-bottom: 1px solid #e8dfd5; background: #fbfaf7; }
-.landing-header-inner { display: flex; align-items: center; justify-content: space-between; width: min(1180px, calc(100% - 64px)); min-height: 78px; margin: 0 auto; }
-.landing-brand, .landing-footer-brand { display: inline-flex; align-items: center; }
-.landing-brand-logo { display: block; width: 154px; height: auto; }
-.landing-header-actions { display: flex; align-items: center; gap: 20px; }
-.landing-signin { color: #51454a; font-size: 12px; font-weight: 700; text-decoration: none; }
-.landing-signin:hover, .landing-text-link:hover { color: var(--brick); }
+.landing-page { background: #fbfaf7; color: var(--ink); }
+.landing-footer-brand { display: inline-flex; align-items: center; }
+.landing-text-link:hover { color: var(--brick); }
 .landing-button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 0 19px; background: var(--burgundy); color: #fff; font-size: 12px; font-weight: 800; text-decoration: none; transition: background 150ms ease, transform 150ms ease; }
 .landing-button:hover { transform: translateY(-1px); background: var(--burgundy-dark); }
-.landing-button-small { min-height: 38px; padding: 0 14px; }
 .landing-hero { padding: 36px 0 52px; }
 .landing-hero-inner { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(360px, .75fr); align-items: center; gap: clamp(42px, 7vw, 100px); width: min(1180px, calc(100% - 64px)); min-height: 510px; margin: 0 auto; }
 .landing-hero-copy { max-width: 620px; padding: 32px 0; }
@@ -378,17 +372,19 @@ h1 { margin-bottom: 7px; font-family: var(--font-display); font-size: 31px; font
 .landing-feature { position: relative; min-height: 225px; padding: 25px 30px 24px 0; }
 .landing-feature + .landing-feature { padding-left: 30px; border-left: 1px solid #d6cec4; }
 .landing-feature-number { position: absolute; top: 28px; right: 23px; color: #8d7b76; font-size: 9px; font-weight: 800; }
-.landing-feature svg { color: var(--landing-green); }
+.landing-feature svg { color: var(--burgundy); }
 .landing-feature h3 { margin: 27px 0 9px; color: var(--burgundy-dark); font-family: var(--font-display); font-size: 20px; font-weight: 500; }
 .landing-feature p { max-width: 290px; margin: 0; color: #706568; font-size: 11px; line-height: 1.75; }
-.landing-community { padding: 74px max(32px, calc((100% - 1180px) / 2)) 35px; background: var(--landing-green); color: #fffaf1; }
-.landing-community-inner { display: grid; grid-template-columns: 1fr .9fr; gap: 65px; align-items: start; }
+.landing-community { padding: 74px max(32px, calc((100% - 1180px) / 2)) 35px; background: var(--burgundy-dark); color: #fffaf1; }
+.landing-community-inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .95fr) 180px; gap: 38px; align-items: center; }
 .landing-community .landing-kicker { color: #e5c27c; }
 .landing-community h2 { font-size: 34px; }
 .landing-community-copy { padding-top: 26px; }
 .landing-community-copy p { margin: 0 0 14px; color: #e8e7da; font-size: 12px; line-height: 1.8; }
+.landing-community-seal { display: grid; justify-items: end; }
+.landing-community-seal img { display: block; width: 160px; height: auto; border-radius: 50%; box-shadow: 0 0 24px 8px #d6a34f55; filter: drop-shadow(0 8px 18px #00000038); }
 .landing-motto { display: flex; align-items: center; gap: 16px; margin-top: 48px; padding-top: 18px; border-top: 1px solid #ffffff35; color: #f1d28d; }
-.landing-motto span:first-child { font-family: var(--font-display); font-size: 17px; }
+.landing-motto span:first-child { font-family: var(--font-display), "Noto Serif Devanagari", serif; font-size: 17px; line-height: 1.55; }
 .landing-motto span:nth-child(2) { flex: 1; color: #e2e4d8; font-size: 10px; }
 .landing-cta { display: flex; align-items: center; justify-content: space-between; gap: 35px; padding: 65px max(32px, calc((100% - 1180px) / 2)); background: #fbfaf7; }
 .landing-cta .landing-kicker { margin-bottom: 10px; }
@@ -400,11 +396,6 @@ h1 { margin-bottom: 7px; font-family: var(--font-display); font-size: 31px; font
 .landing-footer p { margin: 0; color: #7e7375; font-size: 10px; }
 
 @media (max-width: 760px) {
-  .landing-header-inner { width: calc(100% - 40px); min-height: 68px; }
-  .landing-brand-logo { width: 124px; }
-  .landing-header-actions { gap: 13px; }
-  .landing-signin { font-size: 11px; }
-  .landing-button-small { min-height: 35px; padding: 0 10px; font-size: 10px; }
   .landing-hero { padding: 22px 0 36px; }
   .landing-hero-inner { grid-template-columns: 1fr; gap: 32px; width: calc(100% - 40px); min-height: 0; }
   .landing-hero-copy { padding: 18px 0 0; }
@@ -425,6 +416,8 @@ h1 { margin-bottom: 7px; font-family: var(--font-display); font-size: 31px; font
   .landing-community { padding: 54px 20px 27px; }
   .landing-community-inner { grid-template-columns: 1fr; gap: 14px; }
   .landing-community-copy { padding-top: 0; }
+  .landing-community-seal { justify-items: start; margin-top: 8px; }
+  .landing-community-seal img { width: 132px; }
   .landing-motto { flex-wrap: wrap; gap: 9px 13px; margin-top: 28px; }
   .landing-motto span:first-child { font-size: 15px; }
   .landing-cta { align-items: flex-start; flex-direction: column; gap: 24px; padding: 49px 20px; }

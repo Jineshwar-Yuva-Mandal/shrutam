@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowDown, ArrowRight, BookOpen, CalendarDays, ClipboardCheck, UsersRound } from "lucide-react";
+import { ArrowDown, ArrowRight, BookOpen, CalendarDays, ClipboardCheck } from "lucide-react";
 import BrandLogo from "@/components/brand-logo";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -18,15 +19,6 @@ export default async function HomePage() {
   }
 
   return <main className="landing-page" id="top">
-    <header className="landing-header">
-      <div className="landing-header-inner">
-        <Link href="/" className="landing-brand" aria-label="Shrutam home"><BrandLogo variant="complete" className="landing-brand-logo" priority /></Link>
-        <div className="landing-header-actions">
-          <Link className="landing-button landing-button-small" href="/signup">Get started <ArrowRight size={15} /></Link>
-        </div>
-      </div>
-    </header>
-
     <section className="landing-hero" aria-labelledby="landing-title">
       <div className="landing-hero-inner">
         <div className="landing-hero-copy">
@@ -84,8 +76,11 @@ export default async function HomePage() {
           <p>Jineshwar Yuva Mandal is the youth wing of Shri Vardhaman Sthanakwasi Jain Shravak Sangh, Rajajinagar. Its spirit of learning, seva, and shared responsibility inspires Shrutam.</p>
           <p>Through JYM-Digital, everyday paathshala coordination is moving online, while the heart of it stays human: students learning, teachers guiding, and a community growing together.</p>
         </div>
+        <div className="landing-community-seal">
+          <Image src="/jineshwar-yuva-mandal-logo.png" alt="Jineshwar Yuva Mandal, Rajajinagar" width={512} height={512} unoptimized />
+        </div>
       </div>
-      <div className="landing-motto"><span>Jaha seva, waha samarpan.</span><span>Where there is seva, there is dedication.</span><UsersRound size={20} /></div>
+      <div className="landing-motto"><span>जहाँ सेवा, वहाँ समर्पण।<br />जहाँ युवा, वहाँ परिवर्तन।</span><span>Where there is service, there is dedication. Where there is youth, there is change.</span></div>
     </section>
 
     <section className="landing-cta" aria-labelledby="landing-cta-title">
